@@ -39,3 +39,18 @@ export async function decryptOutput(viewSecretHex: string, o: Pick<StealthOutput
     return null
   }
 }
+
+export interface Reading {
+  output: StealthOutput
+  plain: Plain
+}
+
+/** Try one key on every sealed note of a transaction. An empty list is the answer for a key that opens none of them. */
+export async function listen(viewSecretHex: string, outputs: StealthOutput[]): Promise<Reading[]> {
+  const heard: Reading[] = []
+  for (const output of outputs) {
+    const plain = await decryptOutput(viewSecretHex, output)
+    if (plain) heard.push({ output, plain })
+  }
+  return heard
+}

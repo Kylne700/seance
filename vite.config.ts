@@ -63,10 +63,11 @@ export default defineConfig(({ mode }) => {
     build: {
       target: 'es2022',
       sourcemap: false,
+      chunkSizeWarningLimit: 2500, // one chunk on purpose: the wasm decryptor is most of it (see design.md)
       outDir: gate ? 'dist-gate' : 'dist',
       license: { fileName: 'THIRD-PARTY-LICENSES.md' },
       rollupOptions: { input: gate ? 'gate.html' : 'index.html' },
     },
-    test: { include: ['test/**/*.test.ts'] },
+    test: { include: ['test/**/*.test.ts'], execArgv: ['--disable-warning=ExperimentalWarning'] }, // wasm ESM import is flagged experimental in Node 24
   }
 })

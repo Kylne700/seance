@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Seance: three ghosts read one private Tari payment</title>
+    <meta name="description" content="Pick a real Tari Ootle stealth transaction and watch three viewers read the same bytes: a stranger sees sealed envelopes, a medium with the view key reads the amount and memo, and the wrong key hears nothing." />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0d0b13" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <a class="skip" href="#picker">Skip to the seance</a>
+
+    <header class="hero">
+      <div class="wrap">
+        <p class="kicker">Tari Ootle &middot; Esmeralda testnet &middot; Spooky Secrets</p>
+        <h1>Seance</h1>
+        <p class="lede">A private payment on Tari is a letter sealed in plain sight. Everyone can pass the envelope around, and only one key opens it. Call up a real transaction and watch three ghosts try to read it.</p>
+      </div>
+    </header>
+
+    <main class="wrap" id="main">
+      <section class="picker" id="picker" aria-labelledby="picker-h">
+        <h2 id="picker-h">Call up a transaction</h2>
+        <form id="pick" autocomplete="off" novalidate>
+          <label for="txid">Transaction id</label>
+          <div class="row">
+            <input id="txid" name="txid" type="text" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="64 hexadecimal characters" aria-describedby="txid-hint" />
+            <button class="btn primary" type="submit" id="look">Look at it</button>
+          </div>
+          <p class="hint" id="txid-hint">Any transaction on the Esmeralda test network. Only this id is sent, and only to the indexer.</p>
+          <div class="row">
+            <button class="btn ghost" type="button" id="summon">Summon a recent transaction</button>
+          </div>
+        </form>
+
+        <div class="demo">
+          <label for="demo">Or hold the seance on a prepared one</label>
+          <div class="row">
+            <select id="demo" name="demo"></select>
+            <button class="btn primary" type="button" id="hold">Hold the seance</button>
+          </div>
+        </div>
+
+        <div class="modebar">
+          <span class="badge live" id="mode-badge">Live</span>
+          <span id="mode-text" class="mode-text"></span>
+          <button class="btn ghost small" type="button" id="mode-switch" aria-pressed="false">Use recorded data</button>
+        </div>
+        <p class="status info" id="status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="lensed" aria-labelledby="lenses-h">
+        <h2 id="lenses-h">Three ghosts, one transaction</h2>
+        <div class="lenses">
+          <article class="lens stranger" id="stranger" aria-labelledby="stranger-h">
+            <header class="lens-head">
+              <svg class="spirit" viewBox="0 0 64 72" aria-hidden="true" focusable="false">
+                <path class="body" d="M10 66V30a22 22 0 0 1 44 0v36l-7-6-7 6-7-6-7 6-7-6z" />
+                <rect class="ink" x="15" y="27" width="34" height="9" rx="4.5" />
+              </svg>
+              <div>
+                <h3 id="stranger-h">The Stranger</h3>
+                <p class="role">Holds no key. Sees what everyone sees.</p>
+              </div>
+            </header>
+            <div class="lens-body" id="stranger-body"></div>
+          </article>
+
+          <article class="lens medium" aria-labelledby="medium-h">
+            <header class="lens-head">
+              <svg class="spirit" viewBox="0 0 64 72" aria-hidden="true" focusable="false">
+                <path class="body" d="M10 66V30a22 22 0 0 1 44 0v36l-7-6-7 6-7-6-7 6-7-6z" />
+                <circle class="ink" cx="24" cy="32" r="4.5" />
+                <circle class="ink" cx="40" cy="32" r="4.5" />
+                <path class="flame" d="M32 40c3 3 3 6 0 8-3-2-3-5 0-8z" />
+              </svg>
+              <div>
+                <h3 id="medium-h">The Medium</h3>
+                <p class="role">Holds a recipient's view key. Listens inside this page.</p>
+              </div>
+            </header>
+            <div class="lens-body">
+              <fieldset class="keys" id="keys">
+                <legend>Whose key does the medium hold?</legend>
+              </fieldset>
+              <label for="own-key">Or paste your own view secret</label>
+              <input id="own-key" name="own-key" type="text" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" data-lpignore="true" data-1p-ignore placeholder="64 hexadecimal characters" aria-describedby="own-hint own-note" />
+              <p class="hint warn-text" id="own-hint" aria-live="polite"></p>
+              <p class="hint" id="own-note">A key you paste is used inside this page and goes nowhere. The demo keys are public on purpose, for testnet only.</p>
+              <div class="reading-box" id="reading" role="status" aria-live="polite"></div>
+            </div>
+          </article>
+
+          <article class="lens auditor soon" aria-labelledby="auditor-h">
+            <header class="lens-head">
+              <svg class="spirit" viewBox="0 0 64 72" aria-hidden="true" focusable="false">
+                <path class="body" d="M10 66V30a22 22 0 0 1 44 0v36l-7-6-7 6-7-6-7 6-7-6z" />
+                <circle class="ring" cx="23" cy="32" r="6" />
+                <circle class="ring" cx="41" cy="32" r="6" />
+                <path class="ring" d="M29 32h6" />
+              </svg>
+              <div>
+                <h3 id="auditor-h">The Auditor</h3>
+                <p class="role"><span class="badge soon">Coming next</span></p>
+              </div>
+            </header>
+            <div class="lens-body">
+              <p>A third ghost with a narrower key, one that belongs to the token and not to a person. The plan: it sees how much moved, but not what the note says. It is not built yet, so this page does not pretend.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap">
+        <p><strong>Testnet only.</strong> Every transaction here lives on Tari's Esmeralda test network. The demo view keys are public on purpose and unlock nothing else. Never reuse them.</p>
+        <ul class="links">
+          <li><a href="https://explorer.tari.mw" target="_blank" rel="noopener noreferrer">Tari Ootle explorer<span class="sr-only"> (opens in a new tab)</span></a></li>
+          <li><a href="https://ootle.tari.com" target="_blank" rel="noopener noreferrer">Tari Ootle docs<span class="sr-only"> (opens in a new tab)</span></a></li>
+        </ul>
+        <p>MIT licence. Developed with an AI coding agent (Claude Code). Made for the Tari October Build Contest, Spooky Secrets.</p>
+      </div>
+    </footer>
+  </body>
+</html>
