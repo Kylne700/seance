@@ -1,5 +1,9 @@
 # Seance
 
+**Live: <https://kylne700.github.io/seance/>** (Tari Esmeralda testnet only)
+
+![Seance on demo 1: the Stranger sees only public fields, the Medium reads 0.00031415 SEANCE and a memo with Bob's view key, the Auditor counts both amounts with the audit key](docs/seance-ghosts.png)
+
 A seance for a private payment. Pick a real transaction on Tari's Esmeralda test network and watch three ghosts try to read it. A fourth ghost, with no key at all, tries to link payments together.
 
 - **The Stranger** holds no key. It shows what everyone can see: the id, the outcome, the fee, the sealed notes as real bytes, each with a plain caption. Under the cards, **What still leaks** lists what stays public, with this transaction's real values.
@@ -9,7 +13,7 @@ A seance for a private payment. Pick a real transaction on Tari's Esmeralda test
 
 Made for the Tari October Build Contest, "Spooky Secrets". Testnet only. Nothing here touches mainnet.
 
-Status: stage 2 of the build. Not published anywhere yet. Not built: a result card to share, a preview image and a screen recording (they need the public address).
+Status: live at <https://kylne700.github.io/seance/> (GitHub Pages, rebuilt from `main` on every push). The link-preview image is `public/og.png`. A result card and a 60-second screen recording of the live page were made for the contest post; they are not part of this repo.
 
 ## Try it
 
@@ -33,6 +37,8 @@ npm run build && npm run preview     # production build at http://127.0.0.1:4273
 ```
 
 The build uses a relative base path, so `dist/` works from any folder, for example under `/seance/`.
+
+The link preview (`og:image`, 1200 x 630) is `public/og.png`. It is drawn headless from the page's own stylesheet and ghosts; redraw it after a change to either with `node scripts/make-og.mjs` (needs Chromium). The meta tags are in `index.html`; the smoke test checks them and that the built site serves the image under `/seance/`.
 
 ## What still leaks
 
@@ -142,9 +148,9 @@ What the Auditor does not claim: it does not read memos, it does not spend, it c
 
 | Command | What it checks |
 |---|---|
-| `npm test` | 155 tests in 7 files, offline. For every demo transaction the right view key gives the recorded amount and memo and every other key hears nothing; the audit key counts the recorded amount of both notes of every SEANCE transfer, reads no memo, and a key that is not the audit key hears nothing; the search works in slices and can be cancelled; the Poltergeist's numbers are pinned, each trick is shown to read the field it claims, and its sentences are built from the numbers; the "what still leaks" items; tampered ciphertext fails; recorded mode answers with `fetch` replaced by a function that throws; the fallback rules |
+| `npm test` | 157 tests in 7 files, offline. For every demo transaction the right view key gives the recorded amount and memo and every other key hears nothing; the audit key counts the recorded amount of both notes of every SEANCE transfer, reads no memo, and a key that is not the audit key hears nothing; the search works in slices and can be cancelled; the Poltergeist's numbers are pinned, each trick is shown to read the field it claims, and its sentences are built from the numbers; the "what still leaks" items; a `#tx=` link in capitals (typed or pasted) names the same transaction as in lower case; tampered ciphertext fails; recorded mode answers with `fetch` replaced by a function that throws; the fallback rules |
 | `npm run stranger` | Live. Fetches 3 recent transactions by id from the indexer, parses them with the page's own code, checks the real bytes and that a key that fits nothing hears nothing. Exits 0 only if all three pass |
-| `npm run smoke` | Run `npm run build` first. Headless Chromium over the production build served under `/seance/`, at 1280 and 390 px wide, live and in recorded mode (with every outside host made unresolvable): the 10 s and 60 s steps, all 15 demos through the page, the leaks panel, the Poltergeist (live and recorded say the same), the Auditor (all four SEANCE transfers, wrong keys, progress bar, a key changed mid-count, reduced motion, a 4 times slower CPU with a control for the long-task check), key privacy, 0 console errors, axe, overflow, 44 px targets and the focus ring, keyboard use, contrast, the CSP. Writes `evidence/smoke.txt` and the screenshots |
+| `npm run smoke` | Run `npm run build` first. Headless Chromium over the production build served under `/seance/`, at 1280 and 390 px wide, live and in recorded mode (with every outside host made unresolvable): the 10 s and 60 s steps, all 15 demos through the page, the leaks panel, the Poltergeist (live and recorded say the same), the Auditor (all four SEANCE transfers, wrong keys, progress bar, a key changed mid-count, reduced motion, a 4 times slower CPU with a control for the long-task check), key privacy, 0 console errors, axe, overflow, 44 px targets and the focus ring, keyboard use, contrast, the CSP; the link-preview tags and `og.png` (served under `/seance/`, 1200 x 630); an uppercase `#tx=` link; the loading state with the page's scripts held back (a loading line, buttons that say they are not ready, and a click or Enter that does nothing and does not stop the code from running afterwards). Writes `evidence/smoke.txt` and the screenshots |
 | `npm run links` | Opens the explorer page for each of the 24 transactions this file links to and checks it shows that id and "Commit"; a made-up id is the negative control |
 | `npm run scan` | History, tree and `dist/` read as text, and the SDK's wasm decoded from the bundle (it sits inside as base64; the scan fails if it finds none). The template's wasm has its own scan, `evidence/template-wasm-scan.txt`. Looks for throwaway secrets, key and token shapes, a private word list (counts only), home paths |
 | `npm run licenses` | Licence of every installed dependency; fails on GPL or AGPL |

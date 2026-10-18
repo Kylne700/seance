@@ -1,10 +1,15 @@
-Seance smoke test of dist/ at http://127.0.0.1:4273/seance/, 2026-10-18T21:27:30.397Z, Chrome/154.0.8037.92
+Seance smoke test of dist/ at http://127.0.0.1:4273/seance/, 2026-10-18T23:00:40.934Z, Chrome/154.0.8037.92
 
 == the built files
-ok   build: asset paths are relative (works under /seance/)  [./favicon.svg ./assets/index-C39M9Hd0.js ./assets/index-BRdNt6bU.css #picker]
+ok   build: asset paths are relative (works under /seance/)  [./favicon.svg ./assets/index-Bu3xkOY_.js ./assets/index-BRdNt6bU.css #picker]
 ok   build: no inline script or style in index.html
 ok   build: no gate page shipped; third-party licence notices and favicon are
-ok   build: every host named in the built files is expected (ootle-indexer-a.tari.com, explorer.tari.mw, www.w3.org, ootle.tari.com); the w3.org one is the SVG namespace in the favicon
+ok   build: every host named in the built files is expected (ootle-indexer-a.tari.com, explorer.tari.mw, www.w3.org, kylne700.github.io, ootle.tari.com); the w3.org one is the SVG namespace in the favicon, the github.io one is this site's own address in the preview tags
+ok   preview: og:type, og:url, og:title, og:description, og:image and twitter:card (summary_large_image) are set  [["og:type","og:url","og:title","og:description","og:image","og:image:alt","twitter:card"]]
+ok   preview: og:url and og:image are absolute and name the public address  [https://kylne700.github.io/seance/ https://kylne700.github.io/seance/og.png]
+ok   preview: og:description is short enough to show whole  [248]
+ok   preview: /seance/og.png is served and is a 1200 x 630 PNG  [200 1200x630]
+ok   preview: og.png is at most 300 KB  [188192 bytes]
 
 == the block works (control for the recorded runs)
 ok   the offline browser cannot reach the explorer (so a page that works there needs no outside host)  [net::ERR_NAME_NOT_RESOLVED]
@@ -27,13 +32,13 @@ ok   live 1280px landing: no clipped text
 ok   live 1280px landing: all 18 tap targets are at least 44x44 px
 ok   live 1280px landing: the three lens cards are side by side  [72,785 w363 | 459,785 w363 | 845,785 w363]
 ok   axe live 1280px landing: 0 violations  [45 rules passed; needs-review: color-contrast x16]
-ok   live 1280px: "Summon" shows a transaction id (a0d85bf93d...), in the id field and the address
+ok   live 1280px: "Summon" shows a transaction id (86ef4df92a...), in the id field and the address
 ok   live 1280px: the Stranger says where the data came from  [Live: read from the indexer just now.]
-ok   live 1280px: the 10 s step took 440 ms
+ok   live 1280px: the 10 s step took 519 ms
 ok   live 1280px: the explorer link points at this very id and opens safely
 ok   live 1280px: the Medium card has its own explorer link for the same id
 ok   live 1280px: Summon shows a stranger's transaction, or says it is one of ours  [stranger]
-ok   live 1280px: sealed notes are open by default (2)
+ok   live 1280px: sealed notes are open by default (1)
 ok   live 1280px: with no key chosen the Medium waits ("Hand the medium a key and it will listen.")
 ok   live 1280px: the Auditor has nothing to count yet: no key chosen, or no audit proof on this transaction  [Nothing to count. This token has no audit key, so its notes carry no audit proof. Pick a demo from the group “With an audit key”.]
 ok   live 1280px: the leaks panel lists what this transaction leaves public  [token,audit,spent,created,revealed,rule,times,epochs,fee,length]
@@ -73,9 +78,9 @@ ok   live 1280px demo 1: Bob's key: reads 0.00031415 SEANCE “Midnight at the o
 ok   live 1280px demo 1: the leaks panel lists its 10 items in order, for the transaction on show  [token,audit,spent,created,revealed,rule,times,epochs,fee,length]
 ok   live 1280px demo 1: the panel's token, audit proofs, amounts in the open and fee are this transaction's
 ok   live 1280px demo 1: the spent notes in the panel are the ones the Stranger's card shows (1)
-ok   live 1280px demo 1: while it counts, the Auditor shows a progress bar and the count so far (57 updates)  [[{"value":128,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 128 tried","motion":"none/0s"},{"value":606,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 606 tried","motion":"none/0s"}]]
+ok   live 1280px demo 1: while it counts, the Auditor shows a progress bar and the count so far (57 updates)  [[{"value":128,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 128 tried","motion":"none/0s"},{"value":538,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 538 tried","motion":"none/0s"}]]
 ok   live 1280px demo 1: the "Counting…" card is drawn once, so a screen reader hears it once and not once per slice  [1]
-ok   live 1280px demo 1: the page never froze for 100 ms while the audit key counted (2010 ms in all; 0 tasks of 50 ms or more)
+ok   live 1280px demo 1: the page never froze for 100 ms while the audit key counted (1976 ms in all; 0 tasks of 50 ms or more)
 ok   live 1280px demo 1: bob's key in the Auditor: silence ("The spirits are quiet."), no amount shown  [The spirits are quiet.
 
 This is not the token’s audit key, so the proofs stay sh]
@@ -130,9 +135,9 @@ ok   live 390px landing: no clipped text
 ok   live 390px landing: all 18 tap targets are at least 44x44 px
 ok   live 390px landing: the three lens cards are stacked  [16,1162 w358 | 16,1386 w358 | 16,2140 w358]
 ok   axe live 390px landing: 0 violations  [45 rules passed; needs-review: color-contrast x16]
-ok   live 390px: "Summon" shows a transaction id (a648723c01...), in the id field and the address
+ok   live 390px: "Summon" shows a transaction id (6a44670272...), in the id field and the address
 ok   live 390px: the Stranger says where the data came from  [Live: read from the indexer just now.]
-ok   live 390px: the 10 s step took 123 ms
+ok   live 390px: the 10 s step took 113 ms
 ok   live 390px: the explorer link points at this very id and opens safely
 ok   live 390px: the Medium card has its own explorer link for the same id
 ok   live 390px: Summon shows a stranger's transaction, or says it is one of ours  [stranger]
@@ -174,9 +179,9 @@ ok   live 390px demo 1: Bob's key: reads 0.00031415 SEANCE “Midnight at the ol
 ok   live 390px demo 1: the leaks panel lists its 10 items in order, for the transaction on show  [token,audit,spent,created,revealed,rule,times,epochs,fee,length]
 ok   live 390px demo 1: the panel's token, audit proofs, amounts in the open and fee are this transaction's
 ok   live 390px demo 1: the spent notes in the panel are the ones the Stranger's card shows (1)
-ok   live 390px demo 1: while it counts, the Auditor shows a progress bar and the count so far (56 updates)  [[{"value":128,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 128 tried","motion":"none/0s"},{"value":560,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 560 tried","motion":"none/0s"}]]
+ok   live 390px demo 1: while it counts, the Auditor shows a progress bar and the count so far (57 updates)  [[{"value":128,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 128 tried","motion":"none/0s"},{"value":613,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 613 tried","motion":"none/0s"}]]
 ok   live 390px demo 1: the "Counting…" card is drawn once, so a screen reader hears it once and not once per slice  [1]
-ok   live 390px demo 1: the page never froze for 100 ms while the audit key counted (1986 ms in all; 0 tasks of 50 ms or more)
+ok   live 390px demo 1: the page never froze for 100 ms while the audit key counted (1968 ms in all; 0 tasks of 50 ms or more)
 ok   live 390px demo 1: bob's key in the Auditor: silence ("The spirits are quiet."), no amount shown  [The spirits are quiet.
 
 This is not the token’s audit key, so the proofs stay sh]
@@ -237,7 +242,7 @@ ok   recorded 1280px: the manual switch turns recorded mode on and says so
 ok   axe recorded 1280px landing after the switch: 0 violations  [45 rules passed; needs-review: color-contrast x16]
 ok   recorded 1280px: "Summon" shows a transaction id (c85787bc3d...), in the id field and the address
 ok   recorded 1280px: the Stranger says where the data came from  [Recorded: a saved copy of the indexer's answer.]
-ok   recorded 1280px: the 10 s step took 26 ms
+ok   recorded 1280px: the 10 s step took 31 ms
 ok   recorded 1280px: the explorer link points at this very id and opens safely
 ok   recorded 1280px: the Medium card has its own explorer link for the same id
 ok   recorded 1280px: Summon from the recorded sample never serves one of ours
@@ -299,9 +304,9 @@ ok   recorded 1280px demo 1: the leaks panel lists its 10 items in order, for th
 ok   recorded 1280px demo 1: the panel's token, audit proofs, amounts in the open and fee are this transaction's
 ok   recorded 1280px demo 1: the spent notes in the panel are the ones the Stranger's card shows (1)
 ok   recorded 1280px demo 1: the Stranger's card, audit proofs included, is word for word the same as in the live run
-ok   recorded 1280px demo 1: while it counts, the Auditor shows a progress bar and the count so far (57 updates)  [[{"value":128,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 128 tried","motion":"none/0s"},{"value":653,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 653 tried","motion":"none/0s"}]]
+ok   recorded 1280px demo 1: while it counts, the Auditor shows a progress bar and the count so far (58 updates)  [[{"value":128,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 128 tried","motion":"none/0s"},{"value":661,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 661 tried","motion":"none/0s"}]]
 ok   recorded 1280px demo 1: the "Counting…" card is drawn once, so a screen reader hears it once and not once per slice  [1]
-ok   recorded 1280px demo 1: the page never froze for 100 ms while the audit key counted (1941 ms in all; 0 tasks of 50 ms or more)
+ok   recorded 1280px demo 1: the page never froze for 100 ms while the audit key counted (1929 ms in all; 0 tasks of 50 ms or more)
 ok   recorded 1280px demo 1: bob's key in the Auditor: silence ("The spirits are quiet."), no amount shown  [The spirits are quiet.
 
 This is not the token’s audit key, so the proofs stay sh]
@@ -372,9 +377,9 @@ ok   recorded 390px landing: the three lens cards are stacked  [16,1162 w358 | 1
 ok   axe recorded 390px landing: 0 violations  [45 rules passed; needs-review: color-contrast x16]
 ok   recorded 390px: the manual switch turns recorded mode on and says so
 ok   axe recorded 390px landing after the switch: 0 violations  [45 rules passed; needs-review: color-contrast x16]
-ok   recorded 390px: "Summon" shows a transaction id (b8c651510e...), in the id field and the address
+ok   recorded 390px: "Summon" shows a transaction id (9d9701336d...), in the id field and the address
 ok   recorded 390px: the Stranger says where the data came from  [Recorded: a saved copy of the indexer's answer.]
-ok   recorded 390px: the 10 s step took 15 ms
+ok   recorded 390px: the 10 s step took 20 ms
 ok   recorded 390px: the explorer link points at this very id and opens safely
 ok   recorded 390px: the Medium card has its own explorer link for the same id
 ok   recorded 390px: Summon from the recorded sample never serves one of ours
@@ -436,9 +441,9 @@ ok   recorded 390px demo 1: the leaks panel lists its 10 items in order, for the
 ok   recorded 390px demo 1: the panel's token, audit proofs, amounts in the open and fee are this transaction's
 ok   recorded 390px demo 1: the spent notes in the panel are the ones the Stranger's card shows (1)
 ok   recorded 390px demo 1: the Stranger's card, audit proofs included, is word for word the same as in the live run
-ok   recorded 390px demo 1: while it counts, the Auditor shows a progress bar and the count so far (56 updates)  [[{"value":128,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 128 tried","motion":"none/0s"},{"value":653,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 653 tried","motion":"none/0s"}]]
+ok   recorded 390px demo 1: while it counts, the Auditor shows a progress bar and the count so far (57 updates)  [[{"value":128,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 128 tried","motion":"none/0s"},{"value":424,"max":50000,"label":"Counting the amounts","tick":"Note 1 of 2: amounts up to 424 tried","motion":"none/0s"}]]
 ok   recorded 390px demo 1: the "Counting…" card is drawn once, so a screen reader hears it once and not once per slice  [1]
-ok   recorded 390px demo 1: the page never froze for 100 ms while the audit key counted (1854 ms in all; 0 tasks of 50 ms or more)
+ok   recorded 390px demo 1: the page never froze for 100 ms while the audit key counted (1933 ms in all; 0 tasks of 50 ms or more)
 ok   recorded 390px demo 1: bob's key in the Auditor: silence ("The spirits are quiet."), no amount shown  [The spirits are quiet.
 
 This is not the token’s audit key, so the proofs stay sh]
@@ -521,8 +526,20 @@ ok   auto-fallback 390px: demo 4, the audit key counts 0.0000025 SEANCE + 0.0000
 ok   auto-fallback 390px: demo 4, the audit key: the memo is in neither the Auditor's card nor the Stranger's, and the Stranger's card shows no amount
 ok   auto-fallback 390px: no console error except the browser's own note that the indexer request failed
 ok   auto-fallback 390px: the way back to live is one click
-ok   auto-fallback (indexer never answers): the page gives up and switches to recorded  [after 8076 ms, 1 request held]
-ok   auto-fallback (indexer never answers): the wait is about the 8 s timeout  [8076 ms]
+ok   auto-fallback (indexer never answers): the page gives up and switches to recorded  [after 8087 ms, 1 request held]
+ok   auto-fallback (indexer never answers): the wait is about the 8 s timeout  [8087 ms]
+ok   uppercase #tx= link: the Stranger shows the transaction an id in capitals names (the id is lower-cased first)  [985ef2beb38f]
+ok   uppercase #tx= link: the load's own status shows, not the loading line  [The indexer did not answer, so the page switched to recorded data. Sho]
+ok   uppercase #tx= link: no page error
+ok   while the code loads: the scripts are held back, so the page has none of its code yet  [1 held, 0 demo options]
+ok   while the code loads: a loading line shows  [The page's code is still loading. The buttons wake up when it is ready.]
+ok   while the code loads: all four buttons say not ready (aria-disabled, dimmed, a progress cursor)  [look:true summon:true hold:true mode-switch:true]
+ok   while the code loads: "Look at it" is also disabled, being a submit button (a click or Enter on it would make the browser cancel the code that is still on its way)
+ok   while the code loads: a click on a button, or Enter in the id field, does nothing yet (no navigation, the line stays)  [http://127.0.0.1:4273/seance/]
+ok   while the code loads: the loading line is gone once the code has run
+ok   while the code loads: the four buttons are ready (no aria-disabled, no dimming)  [look:null summon:null hold:null mode-switch:null]
+ok   while the code loads: the first click after that works  [3ca7740a2158]
+ok   while the code loads: no page error
 
 == keyboard, reduced motion, a slow phone, policy
 ok   keyboard 1280px: the first Tab lands on the skip link
@@ -553,8 +570,8 @@ ok   auditor on a slow phone (390px, CPU 4x slower): the audit key counts 0.0003
 ok   auditor on a slow phone (390px, CPU 4x slower): the audit key: the memo is in neither the Auditor's card nor the Stranger's, and the Stranger's card shows no amount
 ok   auditor on a slow phone (390px, CPU 4x slower), counted again: the audit key counts 0.00031415 SEANCE + 0.00018585 SEANCE and says the memo is shut  [[{"term":"Sealed note 1 of 2 counted","amount":"0.00031415 SEANCE","memo":"Memo: shut. The audit key cannot open it."},{"term":"Sealed note 2 of 2 counted","amount":"0.00018585 SEANCE","memo":"Memo: shut. The audit key cannot open it."}]]
 ok   auditor on a slow phone (390px, CPU 4x slower), counted again: the audit key: the memo is in neither the Auditor's card nor the Stranger's, and the Stranger's card shows no amount
-ok   auditor on a slow phone (390px, CPU 4x slower): the Auditor never froze the page for 100 ms (7793 ms in all; 0 tasks of 50 ms or more; 251 progress updates; "Counting" card drawn 1 time)
-ok   auditor on a slow phone (390px, CPU 4x slower): drawing the cards at the click, with the first slice, took no task of 200 ms or more (the longest 61 ms)
+ok   auditor on a slow phone (390px, CPU 4x slower): the Auditor never froze the page for 100 ms (7616 ms in all; 0 tasks of 50 ms or more; 247 progress updates; "Counting" card drawn 1 time)
+ok   auditor on a slow phone (390px, CPU 4x slower): drawing the cards at the click, with the first slice, took no task of 200 ms or more (the longest 63 ms)
 ok   csp: the policy is in the page; connect-src allows only the indexer; default is none  [default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self'; connect-src https://ootle-indexer-a.tari.com; base-uri 'none'; form-action 'none']
 ok   csp: no unsafe-inline, plain unsafe-eval, wildcard, data: or blob:
 ok   csp: negative controls are blocked by the browser: a fetch to another site, eval, an injected inline script  [blocked (TypeError); blocked (EvalError: Evaluating a string as JavaScript violates the fo); injected=false]
