@@ -1,5 +1,5 @@
 // Repo scans. Prints COUNTS ONLY: never a secret, never a match, never a line of the denylist.
-//   1. throwaway secrets (spike keys, seed words, passwords) must not appear anywhere in git history, the working tree or dist/
+//   1. throwaway secrets (spike keys, seed words, passwords) must not appear anywhere in git history, the working tree or dist/ (and the wasm inside it)
 //   2. no private-key blocks, walletd-style tokens or "spend secret = <hex>" assignments
 //   3. a private list of words (path in DENYLIST, default ../../tools/privacy-denylist.txt) must match nothing, and no home paths
 // Where the secret files or the denylist do not exist (a fresh clone) that scan says SKIPPED instead of passing silently.
@@ -25,7 +25,16 @@ const walk = (dir, out = []) => {
 }
 const isText = (buf) => !buf.subarray(0, 4000).includes(0)
 
-// What is scanned: everything ever committed, every file in the working tree that is not ignored, and the built site.
+// The SDK's wasm sits inside the bundle as base64, so the text scan cannot see into it. Decode each one and keep what a "strings" tool would show
+// (every run of printable characters on its own line, so the grep counts below are per run).
+const inlinedWasm = (dir) =>
+  walk(dir)
+    .filter((f) => f.endsWith('.js'))
+    .flatMap((f) => [...readFileSync(f, 'latin1').matchAll(/atob\((["'`])([A-Za-z0-9+/=]{1000,})\1\)/g)])
+    .map((m) => Buffer.from(m[2], 'base64').toString('latin1').replace(/[^\x20-\x7e]+/g, '\n'))
+const wasm = existsSync(join(APP, 'dist')) ? inlinedWasm(join(APP, 'dist')) : []
+
+// What is scanned: everything ever committed, every file in the working tree that is not ignored, the built site, and the wasm inside it.
 const corpora = {
   history: git(['log', '-p', '--all', '--no-color', '--format=fuller']),
   tree: git(['ls-files', '--cached', '--others', '--exclude-standard'])
@@ -36,6 +45,7 @@ const corpora = {
     .map(String)
     .join('\n'),
   dist: existsSync(join(APP, 'dist')) ? walk(join(APP, 'dist')).map((f) => readFileSync(f)).filter(isText).map(String).join('\n') : '',
+  'dist wasm': wasm.join('\n'),
 }
 
 let bad = 0
@@ -43,6 +53,11 @@ const report = (what, count, note = '') => {
   if (count !== 'SKIPPED' && count > 0) bad++
   console.log(`${count === 'SKIPPED' || count === 0 ? 'ok  ' : 'FAIL'} ${what}: ${count}${note ? `  (${note})` : ''}`)
 }
+// A dist/ whose wasm the scan cannot find would make every "dist wasm" count below an empty 0.
+if (existsSync(join(APP, 'dist')) && wasm.length === 0) {
+  bad++
+  console.log('FAIL no inlined wasm found in dist/: the "dist wasm" scans below would read nothing')
+} else if (wasm.length > 0) console.log(`ok   inlined wasm modules decoded from dist: ${wasm.length}`)
 
 // 1. Secret values, read in code from the throwaway folders. Only the number of values found is printed.
 const secrets = new Set()

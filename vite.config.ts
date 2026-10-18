@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vitest/config'
+import { blankBuildPaths } from './scripts/wasm-paths.ts'
 import { INDEXER_URL } from './src/config.ts'
 
 // The only network the built page may open is the indexer. Same-origin fetches are NOT allowed (no 'self' in connect-src):
@@ -18,7 +19,8 @@ const CSP = [
 
 // @tari-project/ootle-wasm imports its .wasm as an ES module. Bundlers do not support that on their own, and the usual plugin
 // fetch()es the file at run time, which would force 'self' into connect-src. This plugin embeds the bytes in the JS instead and
-// instantiates them with the import object the wasm asks for.
+// instantiates them with the import object the wasm asks for. The only change to the bytes: upstream's build-machine home folders
+// in its panic messages are blanked at the same length (scripts/wasm-paths.ts).
 function wasmInline(): Plugin {
   return {
     name: 'seance-wasm-inline',
@@ -26,7 +28,7 @@ function wasmInline(): Plugin {
     load(id) {
       const file = id.split('?')[0]!
       if (!file.endsWith('.wasm')) return null
-      const bytes = readFileSync(file)
+      const { bytes } = blankBuildPaths(readFileSync(file))
       const mod = new WebAssembly.Module(bytes)
       const modules = [...new Set(WebAssembly.Module.imports(mod).map((i) => i.module))]
       const names = WebAssembly.Module.exports(mod).map((e) => e.name)
