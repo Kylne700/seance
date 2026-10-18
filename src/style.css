@@ -172,6 +172,33 @@ summary .peek { font-family: var(--mono); font-size: .8125rem; color: var(--mute
 .val { margin: 0 0 4px; font-weight: 600; }
 .val.none { color: var(--muted); font-weight: 400; font-style: italic; }
 
+/* The Poltergeist */
+.polt { margin-bottom: 48px; }
+.synthetic { max-width: 46rem; margin: 0 0 20px; padding: 12px 16px; border: 1px dashed var(--amber); border-radius: 12px; background: var(--well); }
+.tricks { list-style: none; margin: 0 0 16px; padding: 0; display: grid; gap: 16px; }
+.trick { min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+@media (min-width: 960px) {
+  .trick { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); column-gap: 24px; align-content: start; }
+  .trick > h3, .trick > .how, .trick > .why { grid-column: 1; }
+  .trick > .results { grid-column: 2; grid-row: 1 / span 3; margin: 0; align-self: start; }
+}
+.trick h3 { font-size: 1.25rem; margin-bottom: 4px; }
+.how { color: var(--muted); max-width: 46rem; }
+.results { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 12px 0; }
+@media (min-width: 560px) { .results { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.res { min-width: 0; background: var(--well); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.res dt { color: var(--violet); font-size: .8125rem; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+.res dd { margin: 0; }
+.tag { text-transform: none; letter-spacing: 0; color: var(--muted); }
+.num { font-family: var(--serif); font-size: 1.75rem; font-weight: 600; line-height: 1.2; }
+.sub { font-size: .875rem; color: var(--muted); }
+.res.all .num { color: var(--rose); }
+.res.some .num { color: var(--amber); }
+.res.none .num { color: var(--mint); }
+.res.na .num { color: var(--muted); font-size: 1.125rem; font-family: var(--sans); font-weight: 400; font-style: italic; }
+.why { margin: 0; max-width: 46rem; }
+.verdict { max-width: 46rem; font-family: var(--serif); font-size: 1.25rem; line-height: 1.4; }
+
 /* Medium */
 .keys { border: 0; margin: 0 0 12px; padding: 0; min-width: 0; }
 .keys legend { font-weight: 600; padding: 0; margin-bottom: 8px; }

@@ -13,6 +13,7 @@ export interface StealthOutput {
   minimumValuePromise: number
   hasViewableBalanceProof: boolean // true only when the resource has an auditor view key
   spendCondition: string // "Key" (one public key may spend) or another variant name
+  lockKey: string | null // the public key that may spend the note, when the rule is "Key": named in the open
 }
 
 export interface StealthStatement {
@@ -34,6 +35,7 @@ export interface TxView {
   minEpoch: number | null
   maxEpoch: number | null
   nonce: number | null
+  signers: string[] // the public keys that signed it (the transaction's own signatures and the seal): named in the open
   instructionKinds: string[]
   statements: StealthStatement[]
   outputs: StealthOutput[] // all stealth outputs, in order
@@ -65,7 +67,9 @@ export function parseTransaction(reply: unknown): TxView {
   if (!id || !isTxId(id)) throw new ParseError('transaction_id missing')
   const v1 = obj(item.transaction, 'transaction').V1
   if (!v1) throw new ParseError('unsupported transaction version (this page reads V1)')
-  const body = obj(obj(obj(v1, 'V1').body, 'body').transaction, 'body.transaction')
+  const container = obj(v1, 'V1')
+  const signed = obj(container.body, 'body')
+  const body = obj(signed.transaction, 'body.transaction')
   const feeInstr = arr(body.fee_instructions ?? [], 'fee_instructions')
   const instr = arr(body.instructions ?? [], 'instructions')
   const summary = item.summary ? obj(item.summary, 'summary') : null
@@ -93,6 +97,7 @@ export function parseTransaction(reply: unknown): TxView {
           const w = obj(x, 'output')
           const o = obj(w.output, 'output.output')
           const ciphertext = hex(o.encrypted_data, 'encrypted_data')
+          const auth = w.auth && typeof w.auth === 'object' ? (w.auth as Record<string, unknown>) : null
           return {
             statement: n,
             index,
@@ -102,7 +107,8 @@ export function parseTransaction(reply: unknown): TxView {
             ciphertextBytes: ciphertext.length / 2,
             minimumValuePromise: num(o.minimum_value_promise) ?? 0,
             hasViewableBalanceProof: o.viewable_balance_proof != null,
-            spendCondition: w.auth && typeof w.auth === 'object' ? (Object.keys(w.auth)[0] ?? '?') : '?',
+            spendCondition: auth ? (Object.keys(auth)[0] ?? '?') : '?',
+            lockKey: typeof auth?.Key === 'string' && HEX.test(auth.Key) ? auth.Key : null,
           }
         }),
       })
@@ -121,6 +127,7 @@ export function parseTransaction(reply: unknown): TxView {
     minEpoch: num(body.min_epoch),
     maxEpoch: num(body.max_epoch),
     nonce: num(body.nonce),
+    signers: [...arr(signed.signatures ?? [], 'signatures'), ...(container.seal_signature ? [container.seal_signature] : [])].map((x) => hex(obj(x, 'signature').public_key, 'signer key')),
     instructionKinds: [...feeInstr.map(kind), ...instr.map(kind)],
     statements,
     outputs: statements.flatMap((s) => s.outputs),

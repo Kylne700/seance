@@ -4,6 +4,7 @@ import { IndexerClient } from '@tari-project/ootle-indexer'
 import ledger from '../ledger.json'
 import { INDEXER_TIMEOUT_MS, INDEXER_URL, RECENT_LIMIT } from './config.ts'
 import { isTxId, ParseError, parseTransaction, type TxView } from './chain.ts'
+import type { World } from './poltergeist.ts'
 
 export type Mode = 'live' | 'recorded'
 export type Problem = 'bad-id' | 'not-found' | 'not-recorded' | 'format'
@@ -45,8 +46,8 @@ export const demos: Demo[] = (ledger.txs as { id: string; to: string; kind: stri
 export const recordedAt: string = ledger.recent.capturedAt
 
 // Every transaction we sent for this page (the prepared demos, and the setup behind them). Summon never passes these off as a stranger's.
-const sent = ledger as unknown as { txs: { id: string }[]; hero?: { id: string }[]; setup?: { id: string }[] }
-export const ourIds: ReadonlySet<string> = new Set([...sent.txs, ...(sent.hero ?? []), ...(sent.setup ?? [])].map((t) => t.id))
+const sent = ledger as unknown as { txs: { id: string }[]; earlier?: { id: string }[]; hero?: { id: string }[]; setup?: { id: string }[] }
+export const ourIds: ReadonlySet<string> = new Set([...sent.txs, ...(sent.earlier ?? []), ...(sent.hero ?? []), ...(sent.setup ?? [])].map((t) => t.id))
 
 const recorded = new Map<string, unknown>([
   ...ledger.txs.map((t) => [t.id, t.reply] as const),
@@ -63,6 +64,16 @@ function withNotes(items: unknown[]): TxView[] {
       return []
     }
   })
+}
+
+/** What the Poltergeist reads: the demo payments with their transactions, and the recorded transactions that are not ours (the crowd). */
+export function recordedWorld(): World {
+  return {
+    payments: ledger.txs.map((t) => ({ id: t.id, to: t.to, amount: t.amount })),
+    views: ledger.txs.map((t) => parseTransaction(t.reply)),
+    crowd: withNotes(ledger.recent.transactions).filter((v) => !ourIds.has(v.id)),
+    accounts: Object.fromEntries(Object.entries(demoKeys).map(([name, k]) => [name, k.address])),
+  }
 }
 
 /** What Summon may show: a stranger's transaction before one of ours, a settled one before one that is not. Empty when there is nothing. */

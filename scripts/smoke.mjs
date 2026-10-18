@@ -25,7 +25,7 @@ const INDEXER_HOST = new URL(INDEXER_URL).host
 const ledger = JSON.parse(readFileSync(join(APP, 'ledger.json'), 'utf8'))
 const keys = ledger.keys
 const tx = (n) => ledger.txs[n - 1]
-const OURS = new Set([...ledger.txs, ...(ledger.hero ?? []), ...(ledger.setup ?? [])].map((t) => t.id)) // what we sent for this page (same rule as src/data.ts)
+const OURS = new Set([...ledger.txs, ...(ledger.earlier ?? []), ...(ledger.hero ?? []), ...(ledger.setup ?? [])].map((t) => t.id)) // what we sent for this page (same rule as src/data.ts)
 const UNKNOWN = 'ab'.repeat(32)
 const QUIET = 'The spirits are quiet.'
 const NO_KEY = 'Hand the medium a key and it will listen.'

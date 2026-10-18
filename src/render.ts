@@ -6,6 +6,7 @@ import type { Reading } from './decrypt.ts'
 import { clear, h } from './dom.ts'
 import { outcomeLabel, plural, short, tari, when } from './format.ts'
 import { leaks, paysFee, type Leak } from './leaks.ts'
+import { notes, summary, TRICKS, type Report, type Score, type TrickId } from './poltergeist.ts'
 
 const MAX_NOTES = 6 // a transaction with more sealed notes than this is cut here, and says so
 
@@ -125,6 +126,47 @@ function leakItem(l: Leak): HTMLElement {
 export function renderLeaks(body: HTMLElement, v: TxView | null): void {
   clear(body)
   body.append(v ? h('dl', { class: 'leak-list' }, ...leaks(v).map(leakItem)) : h('p', { class: 'empty' }, 'Nothing to inspect yet. Call up a transaction above.'))
+}
+
+/** How a trick did, in a word the colour repeats. */
+const tone = (s: Score | null): 'all' | 'some' | 'none' | 'na' => (!s ? 'na' : s.tied === s.of ? 'all' : s.tied === 0 ? 'none' : 'some')
+
+function outcome(label: string, tag: string, s: Score | null, id: TrickId, crowd: number | null): HTMLElement {
+  const finds = id === 'amount'
+  const verdict = !s ? 'An account ledger has no notes to follow.' : tone(s) === 'all' ? (finds ? 'Finds every payment' : 'Ties every payment') : tone(s) === 'none' ? (finds ? 'Finds none' : 'Ties none') : finds ? 'Finds some' : 'Ties some'
+  return h(
+    'div',
+    { class: `res ${tone(s)}` },
+    h('dt', null, label, ' ', h('span', { class: 'tag' }, tag)),
+    h('dd', { class: 'num' }, s ? `${s.tied} of ${s.of}` : 'Not applicable'),
+    h('dd', { class: 'sub' }, verdict, s && crowd != null ? ` · ${s.wrong} mixed up with others` : ''),
+  )
+}
+
+/** The Poltergeist: five tricks, each scored on a synthetic transparent ledger and on the recorded Tari transactions. */
+export function renderPoltergeist(body: HTMLElement, r: Report): void {
+  clear(body)
+  const why = notes(r)
+  body.append(
+    h(
+      'ul',
+      { class: 'tricks' },
+      ...r.rows.map((row) =>
+        h(
+          'li',
+          { class: 'trick', 'data-trick': row.id },
+          h('h3', null, TRICKS[row.id].name),
+          h('p', { class: 'how' }, TRICKS[row.id].how(r.gapMs)),
+          h('dl', { class: 'results' }, outcome('Transparent ledger', 'synthetic', row.transparent, row.id, null), outcome('Tari', 'recorded, real', row.tari, row.id, r.crowd)),
+          h('p', { class: 'why' }, why[row.id]),
+        ),
+      ),
+    ),
+    h('p', { class: 'verdict' }, summary(r)),
+    caption(
+      `Each count is out of the ${r.of} demo payments, which one wallet of ours sent. A trick "ties" a payment when it puts it in a group with another of ours; groups grow by chaining, so if A is tied to B and B to C, all three are one group. "Mixed up" counts payments whose group also holds a transaction that is not ours: the Tari side is read together with ${r.crowd} such transactions from the recorded sample, and the synthetic ledger has none. These numbers describe this demo, with one sender, ${r.spanSeconds} seconds and one fee. They do not say how a busy wallet would fare, and we did not measure that. Computed in this page from recorded data; it asks nobody.`,
+    ),
+  )
 }
 
 export type Hearing = { kind: 'no-tx' } | { kind: 'no-key' } | { kind: 'silence' } | { kind: 'read'; who: string; readings: Reading[]; all: StealthOutput[] }

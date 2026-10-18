@@ -1,8 +1,9 @@
-import { createData, demoKeys, demos, LookupError, type Shown } from './data.ts'
+import { createData, demoKeys, demos, LookupError, recordedWorld, type Shown } from './data.ts'
 import { isViewSecret, listen } from './decrypt.ts'
 import { clear, h } from './dom.ts'
 import { outcomeLabel, short } from './format.ts'
-import { explorerLink, renderLeaks, renderReading, renderStranger, renderStrangerEmpty, type Hearing } from './render.ts'
+import { poltergeist } from './poltergeist.ts'
+import { explorerLink, renderLeaks, renderPoltergeist, renderReading, renderStranger, renderStrangerEmpty, type Hearing } from './render.ts'
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const el = document.getElementById(id)
@@ -178,6 +179,7 @@ ownKey.addEventListener('input', () => {
 reflectMode()
 renderStrangerEmpty(strangerBody)
 renderLeaks(leaksBody, null)
+renderPoltergeist($('polt-body'), poltergeist(recordedWorld())) // recorded data only: the same numbers on every visit
 void hear()
 const fromHash = /^#tx=([0-9a-f]{64})$/.exec(location.hash)
 if (fromHash) void load(() => data.lookup(fromHash[1]))

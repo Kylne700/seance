@@ -1816,6 +1816,16 @@
    }
   }
  ],
+ "earlier": [
+  {
+   "id": "82583c6e1d3f14a3fb33c8c22415361bcd5a96585af55a34462197996f9e8ad4",
+   "note": "Our first stealth transfer (1234567 base units with a memo), sent before the demo set. It sits in the recorded network sample."
+  },
+  {
+   "id": "9cff4ac6220c2bca138e1b56d6054224bfc6fc320e6bfbe20a99266486db604d",
+   "note": "The claim of the faucet burn that funded the throwaway account, submitted by our wallet. It sits in the recorded network sample."
+  }
+ ],
  "recent": {
   "capturedAt": "2026-10-18T16:56:04.694Z",
   "note": "Public Esmeralda transactions that contain a stealth transfer, as returned by the indexer. For the offline \"summon\" button.",
