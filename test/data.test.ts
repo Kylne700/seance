@@ -121,6 +121,16 @@ describe('live mode', () => {
     expect(url.searchParams.get('limit')).toBe(String(RECENT_LIMIT))
   })
 
+  it('summon prefers a settled transaction over a rejected one', async () => {
+    const rejected = structuredClone(ledger.recent.transactions[0]) as unknown as Record<string, unknown>
+    rejected.summary = null
+    rejected.rejected_reason = 'Execution failure (InsufficientFunds)'
+    stubFetch(() => json({ transactions: [rejected, ledger.recent.transactions[1]] }))
+    const shown = await createData({ pick: () => 0 }).recent()
+    expect(shown.view.id).toBe(ledger.recent.transactions[1].transaction_id)
+    expect(shown.view.outcome).toBe('Commit')
+  })
+
   it('a live chain with no private transfer in it: the recorded sample is used, labelled, and the page stays live', async () => {
     stubFetch(() => json({ transactions: [] }))
     const data = createData({ pick: () => 0 })

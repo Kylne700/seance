@@ -106,7 +106,9 @@ export function createData(opts: { timeoutMs?: number; pick?: (n: number) => num
     if (mode === 'live') {
       try {
         const views = withNotes((await within(client.listRecentTransactions({ limit: RECENT_LIMIT, last_id: null, source: null }))).transactions)
-        if (views.length) return { view: views[pick(views.length)], mode, fellBack, quietChain: false }
+        const settled = views.filter((v) => v.outcome === 'Commit') // a rejected or unsettled one makes a poor first impression
+        const pool = settled.length ? settled : views
+        if (pool.length) return { view: pool[pick(pool.length)], mode, fellBack, quietChain: false }
         const sample = withNotes(ledger.recent.transactions)
         return { view: sample[pick(sample.length)], mode: 'recorded', fellBack, quietChain: true }
       } catch {

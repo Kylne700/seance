@@ -131,3 +131,24 @@ describe('listen: one key on every sealed note of a transaction', () => {
     expect(await listen(keys.bob.viewSecret, [])).toEqual([])
   })
 })
+
+describe('a transaction the network did not settle', () => {
+  const reason = 'Execution failure (InsufficientFunds): At instruction #3: not enough revealed funds'
+  const rejected = (() => {
+    const reply = structuredClone(txs[0].reply) as { transaction: Record<string, unknown> }
+    reply.transaction.summary = null
+    reply.transaction.rejected_reason = reason
+    return reply
+  })()
+
+  it('still parses: no outcome, no fee, the reason kept, the sealed notes still shown', () => {
+    const view = parseTransaction(rejected)
+    expect(view.outcome).toBeNull()
+    expect(view.feePaid).toBeNull()
+    expect(view.rejectedReason).toBe(reason)
+    expect(view.outputs).toHaveLength(2)
+  })
+  it('a settled one has no rejection reason', () => {
+    expect(parseTransaction(txs[0].reply).rejectedReason).toBeNull()
+  })
+})

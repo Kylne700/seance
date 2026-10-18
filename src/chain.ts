@@ -26,7 +26,8 @@ export interface StealthStatement {
 
 export interface TxView {
   id: string
-  outcome: string | null
+  outcome: string | null // null while there is no summary: not finalized yet, or rejected before it ran
+  rejectedReason: string | null // the indexer's reason, when it gave one
   feePaid: number | null // micro-tTARI (uT)
   createdAt: string | null
   finalizedAt: string | null
@@ -113,6 +114,7 @@ export function parseTransaction(reply: unknown): TxView {
   return {
     id,
     outcome: summary ? str(summary.outcome) : null,
+    rejectedReason: str(item.rejected_reason) || null,
     feePaid: summary ? num(summary.total_fees_paid) : null,
     createdAt: str(item.created_at),
     finalizedAt: summary ? str(summary.finalized_at) : null,

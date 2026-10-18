@@ -4,7 +4,7 @@ import { explorerTx } from './config.ts'
 import type { Shown } from './data.ts'
 import type { Reading } from './decrypt.ts'
 import { clear, h } from './dom.ts'
-import { short, tari } from './format.ts'
+import { outcomeLabel, short, tari } from './format.ts'
 
 const MAX_NOTES = 6 // a transaction with more sealed notes than this is cut here, and says so
 
@@ -26,6 +26,16 @@ const fact = (term: string, ...value: (Node | string)[]): HTMLElement => h('div'
 const caption = (text: string): HTMLElement => h('p', { class: 'caption' }, text)
 const hex = (value: string): HTMLElement => h('code', { class: 'hex' }, value)
 const bytes = (term: string, value: string, text: string): HTMLElement => h('div', { class: 'bytes' }, h('p', { class: 'term' }, term), hex(value), caption(text))
+
+const clip = (s: string, n: number): string => (s.length <= n ? s : `${s.slice(0, n - 1)}…`)
+const OUTCOME_CAPTION: Record<string, string> = {
+  Commit: 'The network accepted it.',
+  FeeIntentCommit: 'Only the fee went through. The rest of the transaction was aborted.',
+}
+function outcomeFact(v: TxView): HTMLElement {
+  const text = v.outcome ? OUTCOME_CAPTION[v.outcome] : v.rejectedReason ? clip(v.rejectedReason, 240) : 'It has no summary yet, so the network has not settled it.'
+  return fact('Outcome', outcomeLabel(v), caption(text ?? ''))
+}
 
 export function explorerLink(id: string): HTMLElement {
   return h('a', { class: 'btn ghost', href: explorerTx(id), target: '_blank', rel: 'noopener noreferrer' }, 'Open in the explorer', h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
@@ -54,7 +64,9 @@ function note(o: StealthOutput, i: number, total: number): HTMLElement {
   )
 }
 
-function statement(st: StealthStatement, n: number): HTMLElement {
+function statement(st: StealthStatement, n: number, feePaid: number | null): HTMLElement {
+  const ro = st.revealedOut
+  const isFee = ro != null && feePaid != null && Number(ro.amount) === feePaid
   const shown = st.outputs.slice(0, MAX_NOTES)
   return h(
     'section',
@@ -65,7 +77,7 @@ function statement(st: StealthStatement, n: number): HTMLElement {
       'dl',
       { class: 'facts' },
       st.revealedIn !== '0' ? fact('Taken from the public balance', `${tari(st.revealedIn)}, in the open`) : null,
-      st.revealedOut ? fact('Paid out in the open', `${tari(st.revealedOut.amount)} to key ${short(st.revealedOut.receiver, 6)}`, caption('Revealed amounts are readable by everyone, unlike the sealed notes below.')) : null,
+      ro ? fact(isFee ? 'Revealed to pay the fee' : 'Revealed in the open', `${tari(ro.amount)} for key ${short(ro.receiver, 6)}`, caption(isFee ? 'This is the network fee. The amount, and the key it names, are in the open, unlike the sealed notes below.' : 'Revealed amounts are readable by everyone, unlike the sealed notes below.')) : null,
       st.inputCommitments.length ? fact('Spent notes', ...st.inputCommitments.slice(0, MAX_NOTES).map((c) => h('code', { class: 'hex' }, short(c, 12))), caption('Which old notes were spent is public. What was inside them is not.')) : null,
     ),
     ...shown.map((o, i) => note(o, i, st.outputs.length)),
@@ -82,13 +94,13 @@ export function renderStranger(body: HTMLElement, s: Shown): void {
       'dl',
       { class: 'facts' },
       fact('Transaction', hex(v.id)),
-      fact('Outcome', v.outcome ?? 'unknown'),
-      fact('Fee paid', v.feePaid == null ? 'unknown' : `${tari(v.feePaid)}, in the clear`),
+      outcomeFact(v),
+      fact('Fee paid', v.feePaid == null ? 'Not known without a summary' : `${tari(v.feePaid)}, in the clear`),
       fact('Created', when(v.createdAt)),
       fact('Instructions', h('ul', { class: 'instr' }, ...v.instructionKinds.map((k) => h('li', null, h('code', null, k), KIND_CAPTION[k] ? h('span', { class: 'cap' }, KIND_CAPTION[k]) : null)))),
     ),
     h('div', { class: 'actions' }, explorerLink(v.id)),
-    ...v.statements.map(statement),
+    ...v.statements.map((st, n) => statement(st, n, v.feePaid)),
     ...(v.statements.length === 0 ? [h('p', { class: 'empty' }, 'This transaction has no private transfer, so nothing in it is sealed.')] : []),
   )
 }

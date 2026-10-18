@@ -8,3 +8,6 @@ export function tari(uT: bigint | number | string): string {
 
 /** First and last characters of a long hex string, for tight places. */
 export const short = (h: string, n = 8): string => (h.length <= 2 * n + 1 ? h : `${h.slice(0, n)}…${h.slice(-n)}`)
+
+/** A transaction without a summary was rejected before it ran, or is not finalized yet. */
+export const outcomeLabel = (v: { outcome: string | null; rejectedReason: string | null }): string => v.outcome ?? (v.rejectedReason ? 'Rejected' : 'Not finalized yet')

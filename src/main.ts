@@ -1,7 +1,7 @@
 import { createData, demoKeys, demos, LookupError, type Shown } from './data.ts'
 import { isViewSecret, listen } from './decrypt.ts'
 import { h } from './dom.ts'
-import { short } from './format.ts'
+import { outcomeLabel, short } from './format.ts'
 import { renderReading, renderStranger, renderStrangerEmpty, type Hearing } from './render.ts'
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
@@ -81,7 +81,7 @@ function checkRadio(name: string | null): void {
 }
 
 function describe(s: Shown): string {
-  const what = `Showing transaction ${short(s.view.id, 8)} (${s.view.outcome ?? 'outcome unknown'}).`
+  const what = `Showing transaction ${short(s.view.id, 8)} (${outcomeLabel(s.view)}).`
   if (s.fellBack) return `The indexer did not answer, so the page switched to recorded data. ${what}`
   if (s.quietChain) return `The latest live transactions held no private transfer, so this one is recorded. ${what}`
   if (demos.find((d) => d.id === s.view.id)?.kind === 'revealed') return `${what} This sender revealed the amount on purpose, so there is nothing sealed to read: compare the Stranger's view with the other demos.`
