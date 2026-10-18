@@ -1,7 +1,7 @@
 // Browser gate: does the page (a) load the wasm through the bundler, (b) fetch the indexer itself (CORS), (c) decrypt in the page?
 // scripts/gate.mjs injects window.__GATE__ = { tx, viewSecret } and reads window.__GATE_RESULT__. The secret is never shown or stored.
 import * as wasm from '@tari-project/ootle-wasm'
-import { IndexerClient } from '@tari-project/indexer-client'
+import { IndexerClient } from '@tari-project/ootle-indexer'
 import { INDEXER_URL } from './config.ts'
 import { parseTransaction } from './chain.ts'
 import { decryptOutput } from './decrypt.ts'

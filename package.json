@@ -23,8 +23,8 @@
     "demo": "node scripts/make-demo.mjs"
   },
   "dependencies": {
-    "@tari-project/indexer-client": "1.11.0",
     "@tari-project/ootle": "0.9.0",
+    "@tari-project/ootle-indexer": "0.9.0",
     "@tari-project/ootle-wasm": "0.46.1"
   },
   "devDependencies": {
