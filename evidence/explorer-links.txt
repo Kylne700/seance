@@ -1,0 +1,16 @@
+Explorer links, checked 2026-10-18T17:27:01.464Z against https://explorer.tari.mw
+ok   7c5d35f880edc08e5cddb42c63f4aaf821e9465dc34f31215713d33391a6a032  http 200  shows the id: true  shows Commit: true  title: Transaction 7c5d35f8… · Veil  (1955 ms)
+ok   985ef2beb38f620257f76856c2692125c12e0507b8b800a59bcab2bb21989c2a  http 200  shows the id: true  shows Commit: true  title: Transaction 985ef2be… · Veil  (1376 ms)
+ok   c1805997848547b24d78cc98e6934ef78bbb83fc5f26d81337b407f6d0e2d5ef  http 200  shows the id: true  shows Commit: true  title: Transaction c1805997… · Veil  (1184 ms)
+ok   ad5095f9ac6f965e939d836640ff1d907fd5923590ddc8f49e62279796632d78  http 200  shows the id: true  shows Commit: true  title: Transaction ad5095f9… · Veil  (1221 ms)
+ok   6fa5e86b9796f50178bb9de6e2125670b5c1cf3756b0a4f5d9695d931935468e  http 200  shows the id: true  shows Commit: true  title: Transaction 6fa5e86b… · Veil  (1169 ms)
+ok   2bbd023b7f27a528e0347ceae4f225c690a24c6cd69d9d6387789b78d2f3f319  http 200  shows the id: true  shows Commit: true  title: Transaction 2bbd023b… · Veil  (1194 ms)
+ok   32090261a197b2f99e4b0a86a6df3b277a5dc4f273576ddf1190509f782fcb23  http 200  shows the id: true  shows Commit: true  title: Transaction 32090261… · Veil  (1168 ms)
+ok   092e8a95877a5882d5f8d3c984dd13ded415ea42080fce1d398a80b2ea55473f  http 200  shows the id: true  shows Commit: true  title: Transaction 092e8a95… · Veil  (1176 ms)
+ok   8ebbfc9c06713ebce4edb5bfc2ce6b561cbb90025ddba7eb5e80b843c71aaab6  http 200  shows the id: true  shows Commit: true  title: Transaction 8ebbfc9c… · Veil  (1171 ms)
+ok   c3a126b2c9177316e3233328394146bbb5920e32e2495776bea2c2fa8a39c0e2  http 200  shows the id: true  shows Commit: true  title: Transaction c3a126b2… · Veil  (1169 ms)
+ok   ec71ff7a36f591b7982c6874706895dabd87358ca4b9133cad833229c4c16031  http 200  shows the id: true  shows Commit: true  title: Transaction ec71ff7a… · Veil  (1252 ms)
+ok   negative control abababababab...  shows Commit: false  (must be false)  page says: Veil Overview Events Templates Validators L1 Supply ⌘K esmeralda · epoch 12,440 Couldn't load this from the indexer Tran
+ok   footer link https://explorer.tari.mw  http 200
+ok   footer link https://ootle.tari.com  http 200
+RESULT: PASS
