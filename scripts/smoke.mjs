@@ -25,6 +25,7 @@ const INDEXER_HOST = new URL(INDEXER_URL).host
 const ledger = JSON.parse(readFileSync(join(APP, 'ledger.json'), 'utf8'))
 const keys = ledger.keys
 const tx = (n) => ledger.txs[n - 1]
+const OURS = new Set([...ledger.txs, ...(ledger.hero ?? []), ...(ledger.setup ?? [])].map((t) => t.id)) // what we sent for this page (same rule as src/data.ts)
 const UNKNOWN = 'ab'.repeat(32)
 const QUIET = 'The spirits are quiet.'
 const NO_KEY = 'Hand the medium a key and it will listen.'
@@ -63,6 +64,10 @@ function snapshot() {
     explorerHref: body.querySelector('.actions a')?.href ?? null,
     explorerRel: body.querySelector('.actions a')?.rel ?? null,
     explorerTarget: body.querySelector('.actions a')?.target ?? null,
+    mediumHref: $('#medium-actions a')?.href ?? null,
+    mediumRel: $('#medium-actions a')?.rel ?? null,
+    mediumTarget: $('#medium-actions a')?.target ?? null,
+    mediumLink: $('#medium-actions a')?.textContent ?? null,
     notes: body.querySelectorAll('details.note').length,
     notesOpen: body.querySelectorAll('details.note[open]').length,
     strangerEmpty: body.querySelector('.empty')?.textContent ?? null,
@@ -237,9 +242,11 @@ async function tabThrough(page, label) {
   }
   const bad = stops.filter((s) => s.style !== 'solid' || s.width < 2 || !s.onScreen || s.color !== 'rgb(255, 224, 138)')
   check(stops.length >= 10 && bad.length === 0, `${label}: all ${stops.length} Tab stops show the yellow 3 px outline and are on screen`, bad.map((s) => `${s.name} ${s.style} ${s.width} ${s.color} ${s.onScreen}`).join('; '))
-  const order = ['a "Skip', 'input#txid', 'button#look', 'button#summon', 'select#demo', 'button#hold', 'button#mode-switch', 'a "Open in the explorer', 'input[key=', 'input#own-key', 'a "Tari Ootle explorer', 'a "Tari Ootle docs']
-  const at = order.map((o) => stops.findIndex((s) => s.name.startsWith(o)))
-  check(at.every((i, k) => i >= 0 && (k === 0 || i > at[k - 1])), `${label}: Tab order follows the page: skip link, id field, buttons, mode switch, explorer link, keys, own key, footer`, order.map((o, k) => `${o}=${at[k]}`).join(' '))
+  // each name is searched for after the previous one, so the two "Open in the explorer" links (Stranger, then Medium) are told apart
+  const order = ['a "Skip', 'input#txid', 'button#look', 'button#summon', 'select#demo', 'button#hold', 'button#mode-switch', 'a "Open in the explorer', 'input[key=', 'input#own-key', 'a "Open in the explorer', 'a "Tari Ootle explorer', 'a "Tari Ootle docs']
+  let prev = -1
+  const at = order.map((o) => (prev = stops.findIndex((s, k) => k > prev && s.name.startsWith(o))))
+  check(at.every((i, k) => i >= 0 && (k === 0 || i > at[k - 1])), `${label}: Tab order follows the page: skip link, id field, buttons, mode switch, Stranger's explorer link, keys, own key, Medium's explorer link, footer`, order.map((o, k) => `${o}=${at[k]}`).join(' '))
   return stops
 }
 
@@ -288,6 +295,9 @@ async function walk(browser, { mode, w }) {
   check(live ? /^Live:/.test(s.source ?? '') || quiet : /^Recorded:/.test(s.source ?? ''), `${tag}: the Stranger says where the data came from`, `${s.source}${quiet ? ' (quiet chain)' : ''}`)
   check(ms < 10000, `${tag}: the 10 s step took ${ms} ms`)
   check(s.explorerHref === explorerTx(s.shownId) && s.explorerTarget === '_blank' && /noopener/.test(s.explorerRel ?? ''), `${tag}: the explorer link points at this very id and opens safely`)
+  check(s.mediumHref === explorerTx(s.shownId) && s.mediumTarget === '_blank' && /noopener/.test(s.mediumRel ?? '') && /^Open in the explorer/.test(s.mediumLink ?? ''), `${tag}: the Medium card has its own explorer link for the same id`)
+  if (live && !quiet) check(!OURS.has(s.shownId) || /one of the demos we made/.test(s.status), `${tag}: Summon shows a stranger's transaction, or says it is one of ours`, `${OURS.has(s.shownId) ? 'ours' : 'stranger'}`)
+  if (!live) check(!OURS.has(s.shownId) && !/one of the demos we made/.test(s.status), `${tag}: Summon from the recorded sample never serves one of ours`)
   check(s.notes >= 1 && s.notesOpen === (wide ? s.notes : 0), `${tag}: sealed notes are ${wide ? 'open' : 'closed'} by default (${s.notes})`)
   check(s.empty === NO_KEY, `${tag}: with no key chosen the Medium waits ("${NO_KEY}")`)
   check(inView(s), `${tag}: the answer is on screen without scrolling by hand: the Stranger card ${wide ? 'starts in the upper half' : 'was scrolled to the top'}`, `top ${s.strangerTop}px of ${H}px, scrollY ${s.scrollY}`)

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vitest/config'
 import { INDEXER_URL } from './src/config.ts'
 
@@ -42,6 +43,28 @@ function wasmInline(): Plugin {
   }
 }
 
+// @tari-project/ootle-wasm declares BSD-3-Clause but ships no LICENSE file, so the generated notice lists it without any text.
+// Its two sibling packages (the same project and the same licence) carry the text; it is copied verbatim, so no holder is invented.
+function wasmLicenseText(): Plugin {
+  const sibling = fileURLToPath(new URL('./node_modules/@tari-project/ootle/LICENSE', import.meta.url))
+  return {
+    name: 'seance-wasm-license-text',
+    apply: 'build',
+    generateBundle: {
+      order: 'post',
+      handler(_, bundle) {
+        const notice = bundle['THIRD-PARTY-LICENSES.md']
+        if (notice?.type !== 'asset') return
+        const text = readFileSync(sibling, 'utf8').trim()
+        const before = String(notice.source)
+        const after = before.replace(/^(## @tari-project\/ootle-wasm - .*)\n/m, (_m, heading: string) => `${heading}\n\n${text}\n`)
+        if (after === before) this.error('the notice has no ootle-wasm entry to complete')
+        notice.source = after
+      },
+    },
+  }
+}
+
 // Only the production build carries the policy: the dev server injects an HMR socket that the policy would block.
 function cspMeta(): Plugin {
   return {
@@ -56,7 +79,7 @@ export default defineConfig(({ mode }) => {
   const gate = mode === 'gate'
   return {
     base: './',
-    plugins: [wasmInline(), cspMeta()],
+    plugins: [wasmInline(), cspMeta(), wasmLicenseText()],
     optimizeDeps: { exclude: ['@tari-project/ootle', '@tari-project/ootle-wasm'] },
     server: { host: '127.0.0.1', port: 5273, strictPort: true },
     preview: { host: '127.0.0.1', port: 4273, strictPort: true },

@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ledger from '../ledger.json'
 import { INDEXER_URL, RECENT_LIMIT } from '../src/config.ts'
-import { createData, demos, LookupError, type Problem } from '../src/data.ts'
+import { createData, demos, LookupError, ourIds, type Problem } from '../src/data.ts'
 import { decryptOutput, listen } from '../src/decrypt.ts'
 import type { TxView } from '../src/chain.ts'
 
@@ -129,6 +129,57 @@ describe('live mode', () => {
     const shown = await createData({ pick: () => 0 }).recent()
     expect(shown.view.id).toBe(ledger.recent.transactions[1].transaction_id)
     expect(shown.view.outcome).toBe('Commit')
+  })
+
+  it('summon prefers a stranger over one of ours, even a rejected stranger, even when ours comes first', async () => {
+    const stranger = ledger.recent.transactions[1]
+    stubFetch(() => json({ transactions: [bobTx.reply, stranger] }))
+    const shown = await createData({ pick: () => 0 }).recent()
+    expect(shown.view.id).toBe(stranger.transaction_id)
+    expect(shown.ours).toBe(false)
+    const rejected = { ...structuredClone(stranger), summary: null, rejected_reason: 'Execution failure (InsufficientFunds)' }
+    stubFetch(() => json({ transactions: [bobTx.reply, rejected] }))
+    const again = await createData({ pick: () => 0 }).recent()
+    expect(again.view.id).toBe(stranger.transaction_id)
+    expect(again.view.outcome).toBeNull()
+  })
+
+  it('summon with only our own transactions in the live list: shows one of ours, live, and flags it', async () => {
+    stubFetch(() => json({ transactions: [bobTx.reply] }))
+    const shown = await createData({ pick: () => 0 }).recent()
+    expect(shown).toMatchObject({ mode: 'live', fellBack: false, quietChain: false, ours: true })
+    expect(shown.view.id).toBe(bobTx.id)
+  })
+
+  it('summon never serves one of ours from the recorded sample while the sample holds strangers', async () => {
+    const sampleSize = ledger.recent.transactions.length
+    for (const live of [false, true]) {
+      if (live) stubFetch(() => json({ transactions: [] }))
+      for (let k = 0; k < sampleSize; k++) {
+        const data = createData({ pick: (n) => k % n })
+        if (!live) data.setMode('recorded')
+        const shown = await data.recent()
+        expect(ourIds.has(shown.view.id), `pick ${k}`).toBe(false)
+        expect(shown.ours).toBe(false)
+      }
+    }
+  })
+
+  it('ourIds covers every transaction id the ledger records outside the network sample', () => {
+    const { recent: _sample, ...own } = ledger
+    const found: string[] = []
+    const walk = (v: unknown): void => {
+      if (Array.isArray(v)) v.forEach(walk)
+      else if (v && typeof v === 'object') {
+        for (const [k, x] of Object.entries(v)) {
+          if ((k === 'id' || k === 'transaction_id') && typeof x === 'string' && /^[0-9a-f]{64}$/.test(x)) found.push(x)
+          else walk(x)
+        }
+      }
+    }
+    walk(own)
+    expect(found.length).toBeGreaterThanOrEqual(txs.length)
+    expect(found.filter((id) => !ourIds.has(id))).toEqual([])
   })
 
   it('a live chain with no private transfer in it: the recorded sample is used, labelled, and the page stays live', async () => {

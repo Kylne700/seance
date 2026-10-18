@@ -50,5 +50,18 @@ for (const scope of ['prod', 'dev']) {
 console.log(`${checked} installed packages checked`)
 for (const n of notes) console.log(`note: ${n}`)
 for (const f of flagged) console.log(`FLAG: ${f}`)
-console.log(flagged.length === 0 ? 'RESULT: PASS (no GPL or AGPL)' : `RESULT: FAIL (${flagged.length} GPL/AGPL)`)
-process.exit(flagged.length === 0 ? 0 : 1)
+
+// The notice the build ships (dist/THIRD-PARTY-LICENSES.md): every entry must carry licence text, and the three @tari-project packages must be listed.
+const notice = join(APP, 'dist', 'THIRD-PARTY-LICENSES.md')
+const noticeProblems = []
+if (existsSync(notice)) {
+  const entries = readFileSync(notice, 'utf8').split(/^## /m).slice(1)
+  for (const e of entries) if (!/Copyright/i.test(e)) noticeProblems.push(`no licence text under "${e.split('\n')[0]}"`)
+  for (const n of ['ootle', 'ootle-indexer', 'ootle-wasm']) if (!entries.some((e) => e.startsWith(`@tari-project/${n} - `))) noticeProblems.push(`@tari-project/${n} is not listed`)
+  console.log(`notice file: ${entries.length} entries, ${noticeProblems.length ? `${noticeProblems.length} problem(s)` : 'every one carries licence text'}`)
+  for (const p of noticeProblems) console.log(`FLAG: notice: ${p}`)
+} else console.log('notice file: NOT CHECKED (no dist/ yet; run npm run build first)')
+
+const ok = flagged.length === 0 && noticeProblems.length === 0
+console.log(ok ? 'RESULT: PASS (no GPL or AGPL; notice complete)' : `RESULT: FAIL (${flagged.length} GPL/AGPL, ${noticeProblems.length} notice problem(s))`)
+process.exit(ok ? 0 : 1)

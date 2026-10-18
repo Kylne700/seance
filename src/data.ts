@@ -24,6 +24,8 @@ export interface Shown {
   fellBack: boolean
   /** Live was up but had no private transfer among the latest transactions, so a recorded one was used. */
   quietChain: boolean
+  /** Summon found nobody else's private transfer, so this is one of the transactions we sent for this page. */
+  ours: boolean
 }
 
 export interface DemoKey {
@@ -42,6 +44,10 @@ export const demoKeys = ledger.keys as Record<string, DemoKey>
 export const demos: Demo[] = (ledger.txs as { id: string; to: string; kind: string }[]).map((t, i) => ({ n: i + 1, id: t.id, to: t.to, kind: t.kind === 'revealed' ? 'revealed' : 'blinded' }))
 export const recordedAt: string = ledger.recent.capturedAt
 
+// Every transaction we sent for this page (the prepared demos, and the setup behind them). Summon never passes these off as a stranger's.
+const sent = ledger as unknown as { txs: { id: string }[]; hero?: { id: string }[]; setup?: { id: string }[] }
+export const ourIds: ReadonlySet<string> = new Set([...sent.txs, ...(sent.hero ?? []), ...(sent.setup ?? [])].map((t) => t.id))
+
 const recorded = new Map<string, unknown>([
   ...ledger.txs.map((t) => [t.id, t.reply] as const),
   ...ledger.recent.transactions.map((t) => [t.transaction_id, t] as const),
@@ -57,6 +63,14 @@ function withNotes(items: unknown[]): TxView[] {
       return []
     }
   })
+}
+
+/** What Summon may show: a stranger's transaction before one of ours, a settled one before one that is not. Empty when there is nothing. */
+function candidates(views: TxView[]): TxView[] {
+  const settled = (vs: TxView[]): TxView[] => vs.filter((v) => v.outcome === 'Commit') // a rejected or unsettled one makes a poor first impression
+  const theirs = views.filter((v) => !ourIds.has(v.id))
+  const ours = views.filter((v) => ourIds.has(v.id))
+  return [settled(theirs), theirs, settled(ours), ours].find((pool) => pool.length) ?? []
 }
 
 /** Network error, timeout, 5xx or throttling: the indexer is unusable, so recorded data takes over. */
@@ -84,7 +98,7 @@ export function createData(opts: { timeoutMs?: number; pick?: (n: number) => num
     let fellBack = false
     if (mode === 'live') {
       try {
-        return { view: parseTransaction(await within(client.getTransaction(id))), mode, fellBack, quietChain: false }
+        return { view: parseTransaction(await within(client.getTransaction(id))), mode, fellBack, quietChain: false, ours: false }
       } catch (e) {
         if (e instanceof ParseError) throw new LookupError('format', 'The indexer answered, but this transaction has a shape this page does not know. The explorer link still works.')
         const status = (e as { status?: number }).status
@@ -98,26 +112,29 @@ export function createData(opts: { timeoutMs?: number; pick?: (n: number) => num
     }
     const reply = recorded.get(id)
     if (!reply) throw new LookupError('not-recorded', 'Recorded mode only knows the demo transactions and a small sample. Switch to live data to look up any other id.')
-    return { view: parseTransaction(reply), mode, fellBack, quietChain: false }
+    return { view: parseTransaction(reply), mode, fellBack, quietChain: false, ours: false }
   }
 
   async function recent(): Promise<Shown> {
+    const sample = (): TxView => {
+      const pool = candidates(withNotes(ledger.recent.transactions))
+      return pool[pick(pool.length)]
+    }
     let fellBack = false
     if (mode === 'live') {
       try {
-        const views = withNotes((await within(client.listRecentTransactions({ limit: RECENT_LIMIT, last_id: null, source: null }))).transactions)
-        const settled = views.filter((v) => v.outcome === 'Commit') // a rejected or unsettled one makes a poor first impression
-        const pool = settled.length ? settled : views
-        if (pool.length) return { view: pool[pick(pool.length)], mode, fellBack, quietChain: false }
-        const sample = withNotes(ledger.recent.transactions)
-        return { view: sample[pick(sample.length)], mode: 'recorded', fellBack, quietChain: true }
+        const pool = candidates(withNotes((await within(client.listRecentTransactions({ limit: RECENT_LIMIT, last_id: null, source: null }))).transactions))
+        if (pool.length) {
+          const view = pool[pick(pool.length)]
+          return { view, mode, fellBack, quietChain: false, ours: ourIds.has(view.id) }
+        }
+        return { view: sample(), mode: 'recorded', fellBack, quietChain: true, ours: false }
       } catch {
         mode = 'recorded'
         fellBack = true
       }
     }
-    const sample = withNotes(ledger.recent.transactions)
-    return { view: sample[pick(sample.length)], mode, fellBack, quietChain: false }
+    return { view: sample(), mode, fellBack, quietChain: false, ours: false }
   }
 
   return {

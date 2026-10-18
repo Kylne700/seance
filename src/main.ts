@@ -1,8 +1,8 @@
 import { createData, demoKeys, demos, LookupError, type Shown } from './data.ts'
 import { isViewSecret, listen } from './decrypt.ts'
-import { h } from './dom.ts'
+import { clear, h } from './dom.ts'
 import { outcomeLabel, short } from './format.ts'
-import { renderReading, renderStranger, renderStrangerEmpty, type Hearing } from './render.ts'
+import { explorerLink, renderReading, renderStranger, renderStrangerEmpty, type Hearing } from './render.ts'
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const el = document.getElementById(id)
@@ -18,6 +18,7 @@ const keysBox = $('keys')
 const ownKey = $<HTMLInputElement>('own-key')
 const ownHint = $('own-hint')
 const reading = $('reading')
+const mediumActions = $('medium-actions')
 const modeBadge = $('mode-badge')
 const modeText = $('mode-text')
 const modeSwitch = $('mode-switch')
@@ -82,6 +83,7 @@ function checkRadio(name: string | null): void {
 
 function describe(s: Shown): string {
   const what = `Showing transaction ${short(s.view.id, 8)} (${outcomeLabel(s.view)}).`
+  if (s.ours) return `Nobody else's private transfer was among the latest transactions, so this is one of the demos we made for this page. ${what}`
   if (s.fellBack) return `The indexer did not answer, so the page switched to recorded data. ${what}`
   if (s.quietChain) return `The latest live transactions held no private transfer, so this one is recorded. ${what}`
   if (demos.find((d) => d.id === s.view.id)?.kind === 'revealed') return `${what} This sender revealed the amount on purpose, so there is nothing sealed to read: compare the Stranger's view with the other demos.`
@@ -112,6 +114,7 @@ async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: 
     if (mine !== loadSeq) return
     current = shown
     renderStranger(strangerBody, shown)
+    mediumActions.replaceChildren(explorerLink(shown.view.id)) // the Medium card has its own link to the same transaction
     txid.value = shown.view.id
     history.replaceState(null, '', `#tx=${shown.view.id}`)
     if (opts.key) {
@@ -126,6 +129,7 @@ async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: 
     if (mine !== loadSeq) return
     current = null
     renderStrangerEmpty(strangerBody)
+    clear(mediumActions)
     reflectMode()
     if (e instanceof LookupError) setStatus(e.message, 'error')
     else {
