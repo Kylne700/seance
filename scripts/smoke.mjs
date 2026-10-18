@@ -1,7 +1,8 @@
 // Browser smoke test of the PRODUCTION build (dist/), served under /seance/ to prove the relative base path works.
-// It walks the judge path (10 s step: summon a transaction or paste an id; 60 s step: hold the seance, wrong key, own key),
-// live and in recorded ("fixture") mode, and checks layout, tap targets, focus rings, keyboard use, reduced motion, contrast,
-// axe and the CSP. Writes evidence/smoke.txt and screenshots evidence/seance-*.png.
+// It walks the judge path (10 s step: summon a transaction or paste an id; 60 s step: hold the seance, wrong key, own key)
+// and the newer parts (the "what still leaks" panel, the Poltergeist, the Auditor with its audit key, which must never freeze the
+// page), live and in recorded ("fixture") mode, at 1280 and 390 px, and checks layout, tap targets, focus rings, keyboard use,
+// reduced motion, contrast, axe and the CSP. Writes evidence/smoke.txt and screenshots evidence/seance-*.png.
 //   npm run build && node scripts/smoke.mjs        (headless; no screen is used)
 // The live parts call the real indexer about a dozen times in total. The recorded parts run in a browser where every outside
 // host fails to resolve, so any request the page tried to make would show up as a failure.
@@ -11,7 +12,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import puppeteer from 'puppeteer-core'
 import { EXPLORER_URL, INDEXER_URL, explorerTx } from '../src/config.ts'
-import { tari } from '../src/format.ts'
+import { amountOf, tari } from '../src/format.ts'
 import { serveDir } from './serve.mjs'
 
 delete process.env.DISPLAY
@@ -25,10 +26,22 @@ const INDEXER_HOST = new URL(INDEXER_URL).host
 const ledger = JSON.parse(readFileSync(join(APP, 'ledger.json'), 'utf8'))
 const keys = ledger.keys
 const tx = (n) => ledger.txs[n - 1]
+const hero = (n) => ledger.hero[n - 1] // the four payments in the demo token SEANCE (it has an audit key): demos 1 to 4 on the page; the TARI demos are 5 to 15
+const TARI_RESOURCE = 'resource_' + '01'.repeat(32)
+const money = (t, v) => amountOf(ledger.hero.includes(t) ? ledger.auditor.resource : TARI_RESOURCE, v) // an amount in the unit of the token it was paid in
+const demoNo = (t) => [...ledger.hero, ...ledger.txs].indexOf(t) + 1 // the number the page's demo list gives a transaction
 const OURS = new Set([...ledger.txs, ...(ledger.earlier ?? []), ...(ledger.hero ?? []), ...(ledger.setup ?? [])].map((t) => t.id)) // what we sent for this page (same rule as src/data.ts)
 const UNKNOWN = 'ab'.repeat(32)
 const QUIET = 'The spirits are quiet.'
 const NO_KEY = 'Hand the medium a key and it will listen.'
+const NO_LEAKS = 'Nothing to inspect yet. Call up a transaction above.'
+const AUDIT_NO_TX = 'The auditor waits for a transaction. Call one up above.'
+const AUDIT_NO_KEY = 'Hand the auditor a key and it will count.'
+const AUDIT_NO_PROOF = 'Nothing to count. This token has no audit key'
+const SHUT = 'Memo: shut. The audit key cannot open it.'
+const LEAK_IDS = ['token', 'audit', 'spent', 'created', 'revealed', 'rule', 'times', 'epochs', 'fee', 'length']
+// The Poltergeist's numbers, out of the 11 demo payments: [trick, the transparent ledger (synthetic), Tari (recorded, real)]. The same table as test/poltergeist.test.ts.
+const POLT = [['reuse', '11 of 11', '0 of 11'], ['amount', '11 of 11', '1 of 11'], ['timing', '11 of 11', '11 of 11'], ['fee', '11 of 11', '11 of 11'], ['spend', 'Not applicable', '11 of 11']]
 
 const lines = []
 let failed = 0
@@ -79,6 +92,17 @@ function snapshot() {
     empty: $('#reading .empty')?.textContent ?? null,
     readings: [...document.querySelectorAll('#reading .reading')].map((r) => ({ amount: r.querySelector('.amount').textContent, memo: r.querySelector('.memo').textContent })),
     readingText: $('#reading').innerText,
+    auditChecked: $('input[name=audit-key]:checked')?.value ?? null,
+    auditText: $('#audit-reading').innerText,
+    auditQuiet: $('#audit-reading .quiet')?.textContent ?? null,
+    auditEmpty: $('#audit-reading .empty')?.textContent ?? null,
+    auditReadings: [...document.querySelectorAll('#audit-reading .reading')].map((r) => ({ term: r.querySelector('.term').textContent, amount: r.querySelector('.amount')?.textContent ?? null, memo: r.querySelector('.memo:last-child').textContent })),
+    leaks: [...document.querySelectorAll('#leaks-body .leak')].map((l) => ({ id: l.dataset.leak, text: l.innerText })),
+    leaksEmpty: $('#leaks-body .empty')?.textContent ?? null,
+    polt: [...document.querySelectorAll('#polt-body .trick')].map((t) => ({ id: t.dataset.trick, results: [...t.querySelectorAll('.res')].map((r) => ({ label: r.querySelector('dt').textContent, num: r.querySelector('dd.num').textContent })) })),
+    synthetic: $('#poltergeist .synthetic')?.textContent ?? null,
+    poltText: $('#polt-body').innerText,
+    verdict: $('#polt-body .verdict')?.textContent ?? null,
     scrollY: Math.round(scrollY),
   }
 }
@@ -124,7 +148,7 @@ function focusProbe() {
   const r = el.getBoundingClientRect()
   const label = el.tagName === 'A' || el.tagName === 'SUMMARY' ? ` "${el.textContent.trim().slice(0, 24)}"` : ''
   return {
-    name: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.tagName === 'INPUT' && el.name === 'key' ? `[key=${el.value}]` : '') + label,
+    name: el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (el.tagName === 'INPUT' && (el.name === 'key' || el.name === 'audit-key') ? `[${el.name}=${el.value}]` : '') + label,
     style: cs.outlineStyle,
     width: parseFloat(cs.outlineWidth),
     color: cs.outlineColor,
@@ -156,6 +180,36 @@ async function heard(page) {
   await sleep(150)
   return snap(page)
 }
+// The Auditor: arm before the action, then wait until its search is over. Also records what the search showed on the way.
+const armAudit = (page) =>
+  page.evaluate(() => {
+    const box = document.getElementById('audit-reading')
+    window.__a = 0
+    window.__bars = []
+    window.__cards = 0
+    window.__card = null
+    window.__ao?.disconnect()
+    window.__ao = new MutationObserver(() => {
+      window.__a++
+      const card = box.querySelector('.counting')
+      if (card && card !== window.__card) {
+        window.__card = card
+        window.__cards++
+      }
+      const bar = box.querySelector('progress.tally')
+      if (bar) {
+        const cs = getComputedStyle(bar)
+        window.__bars.push({ value: bar.value, max: bar.max, label: bar.getAttribute('aria-label'), tick: box.querySelector('.tick')?.textContent ?? '', motion: `${cs.animationName}/${cs.transitionDuration}` })
+      }
+    })
+    window.__ao.observe(box, { childList: true, subtree: true })
+  })
+async function counted(page, ms = 90000) {
+  await until(page, () => window.__a > 0 && !document.querySelector('#audit-reading .counting'), undefined, ms)
+  await sleep(150)
+  return snap(page)
+}
+const traced = (page) => page.evaluate(() => ({ bars: window.__bars, cards: window.__cards, long: window.__long }))
 async function scrollSettled(page) {
   let last = -1
   for (let i = 0; i < 30; i++) {
@@ -173,6 +227,13 @@ const shot = async (page, name, opts = {}) => {
   await sleep(1100)
   return page.screenshot({ path: join(EVID, name), type: 'png', ...opts })
 }
+// one element (a whole section, even if it is taller than the screen), once its fade-in is over
+const shotEl = async (page, selector, name) => {
+  const el = await page.$(selector)
+  await el.evaluate((e) => e.scrollIntoView({ block: 'start' }))
+  await sleep(1100)
+  return el.screenshot({ path: join(EVID, name), type: 'png' })
+}
 const seeLenses = (page) => page.evaluate(() => document.querySelector('.lensed').scrollIntoView())
 
 async function open(browser, { w, h = 800, url = BASE, reduce = false, intercept = null }) {
@@ -180,6 +241,13 @@ async function open(browser, { w, h = 800, url = BASE, reduce = false, intercept
   const mobile = w < 700
   await page.setViewport({ width: w, height: h, deviceScaleFactor: 1, isMobile: mobile, hasTouch: mobile })
   if (reduce) await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }])
+  // every task of 50 ms or more, from the first script on: the Auditor must not freeze the page (checked against 100 ms)
+  await page.evaluateOnNewDocument(() => {
+    window.__long = []
+    new PerformanceObserver((l) => {
+      for (const e of l.getEntries()) window.__long.push(Math.round(e.duration))
+    }).observe({ type: 'longtask', buffered: true })
+  })
   const log = { console: [], pageErrors: [], requests: [], failed: [] }
   page.on('console', (m) => log.console.push({ type: m.type(), text: m.text(), url: m.location()?.url ?? '' }))
   page.on('pageerror', (e) => log.pageErrors.push(String(e)))
@@ -211,7 +279,7 @@ async function axe(page, label) {
 }
 
 async function layout(page, label, { wide }) {
-  await page.evaluate(() => scrollTo(0, 0)) // the Medium card is sticky: measure the cards where they start
+  await page.evaluate(() => scrollTo(0, 0)) // measure the cards where they start
   const r = await page.evaluate(layoutProbe)
   check(r.scrollW <= r.vw, `${label}: no horizontal scroll`, `${r.scrollW} <= ${r.vw}`)
   check(r.over.length === 0, `${label}: nothing sticks out of the viewport`, r.over.slice(0, 5).join('; '))
@@ -243,15 +311,15 @@ async function tabThrough(page, label) {
   const bad = stops.filter((s) => s.style !== 'solid' || s.width < 2 || !s.onScreen || s.color !== 'rgb(255, 224, 138)')
   check(stops.length >= 10 && bad.length === 0, `${label}: all ${stops.length} Tab stops show the yellow 3 px outline and are on screen`, bad.map((s) => `${s.name} ${s.style} ${s.width} ${s.color} ${s.onScreen}`).join('; '))
   // each name is searched for after the previous one, so the two "Open in the explorer" links (Stranger, then Medium) are told apart
-  const order = ['a "Skip', 'input#txid', 'button#look', 'button#summon', 'select#demo', 'button#hold', 'button#mode-switch', 'a "Open in the explorer', 'input[key=', 'input#own-key', 'a "Open in the explorer', 'a "Tari Ootle explorer', 'a "Tari Ootle docs']
+  const order = ['a "Skip', 'input#txid', 'button#look', 'button#summon', 'select#demo', 'button#hold', 'button#mode-switch', 'a "Open in the explorer', 'input[key=', 'input#own-key', 'a "Open in the explorer', 'input[audit-key=', 'a "Tari Ootle explorer', 'a "Tari Ootle docs']
   let prev = -1
   const at = order.map((o) => (prev = stops.findIndex((s, k) => k > prev && s.name.startsWith(o))))
-  check(at.every((i, k) => i >= 0 && (k === 0 || i > at[k - 1])), `${label}: Tab order follows the page: skip link, id field, buttons, mode switch, Stranger's explorer link, keys, own key, Medium's explorer link, footer`, order.map((o, k) => `${o}=${at[k]}`).join(' '))
+  check(at.every((i, k) => i >= 0 && (k === 0 || i > at[k - 1])), `${label}: Tab order follows the page: skip link, id field, buttons, mode switch, Stranger's explorer link, keys, own key, Medium's explorer link, the Auditor's keys, footer`, order.map((o, k) => `${o}=${at[k]}`).join(' '))
   return stops
 }
 
 function expectHeard(s, t, keyName, label) {
-  const want = t.expected.outputs.filter((o) => o.reader === keyName).map((o) => ({ amount: tari(o.value), memo: o.memo ? `“${o.memo}”` : 'No memo' }))
+  const want = t.expected.outputs.filter((o) => o.reader === keyName).map((o) => ({ amount: money(t, o.value), memo: o.memo ? `“${o.memo}”` : 'No memo' }))
   if (want.length === 0) check(s.quiet === QUIET && s.readings.length === 0, `${label}: silence ("${QUIET}"), no amount shown`, s.quiet ? '' : s.readingText.slice(0, 80))
   else check(s.quiet === null && JSON.stringify(s.readings) === JSON.stringify(want), `${label}: reads ${want.map((w) => `${w.amount} ${w.memo}`).join(' + ')}`, JSON.stringify(s.readings))
 }
@@ -270,9 +338,21 @@ async function walk(browser, { mode, w }) {
   let s = await snap(page)
   check(externalHosts(log).length === 0 && log.requests.every((r) => new URL(r.url).pathname.startsWith('/seance/')), `${tag}: loading the page asks nobody but its own server (all paths under /seance/)`, `${log.requests.length} requests`)
   check(s.badge === 'Live' && s.pressed === 'false' && s.strangerEmpty?.startsWith('Nothing on the table') && s.empty === 'The medium waits for a transaction. Call one up above.', `${tag}: first view is the empty seance in live mode`)
-  check(await page.evaluate(() => document.querySelectorAll('#demo option').length === 11 && document.querySelectorAll('input[name=key]').length === 3 && /coming next/i.test(document.querySelector('.lens.auditor').innerText)), `${tag}: 11 demos, 3 demo keys, the Auditor is labelled "Coming next"`)
+  check(
+    await page.evaluate(() => {
+      const n = (q) => document.querySelectorAll(q).length
+      return [...document.querySelectorAll('#demo optgroup')].map((g) => g.children.length).join() === '4,11' && n('input[name=key]') === 4 && n('input[name=audit-key]') === 4 && !/coming next/i.test(document.querySelector('.lens.auditor').innerText)
+    }),
+    `${tag}: 15 demos (4 with an audit key, 11 without), 4 keys to hand the Medium and 4 for the Auditor, the Auditor card is no longer "Coming next"`,
+  )
+  check(s.auditEmpty === AUDIT_NO_TX && s.leaksEmpty === NO_LEAKS, `${tag}: before any transaction the Auditor waits and the leaks panel has nothing to inspect`, `${s.auditEmpty} | ${s.leaksEmpty}`)
+  poltergeistChecks(s, tag)
+  if (live) liveBodies.set(`${w}:polt`, s.poltText)
+  else if (liveBodies.has(`${w}:polt`)) check(liveBodies.get(`${w}:polt`) === s.poltText, `${tag}: the Poltergeist's text is word for word the same as in the live run (it reads recorded data only)`)
   await layout(page, `${tag} landing`, { wide })
   if (live) await shot(page, `seance-${w}-live-landing.png`)
+  await shotEl(page, '#poltergeist', `seance-${w}-${mode}-poltergeist.png`)
+  await page.evaluate(() => scrollTo(0, 0))
   await axe(page, `${tag} landing`)
 
   if (!live) {
@@ -300,6 +380,8 @@ async function walk(browser, { mode, w }) {
   if (!live) check(!OURS.has(s.shownId) && !/one of the demos we made/.test(s.status), `${tag}: Summon from the recorded sample never serves one of ours`)
   check(s.notes >= 1 && s.notesOpen === (wide ? s.notes : 0), `${tag}: sealed notes are ${wide ? 'open' : 'closed'} by default (${s.notes})`)
   check(s.empty === NO_KEY, `${tag}: with no key chosen the Medium waits ("${NO_KEY}")`)
+  check(s.auditEmpty === AUDIT_NO_KEY || s.auditEmpty?.startsWith(AUDIT_NO_PROOF), `${tag}: the Auditor has nothing to count yet: no key chosen, or no audit proof on this transaction`, s.auditEmpty ?? '')
+  check(s.leaks.map((l) => l.id).join() === LEAK_IDS.join() && s.leaksEmpty === null, `${tag}: the leaks panel lists what this transaction leaves public`, s.leaks.map((l) => l.id).join())
   check(inView(s), `${tag}: the answer is on screen without scrolling by hand: the Stranger card ${wide ? 'starts in the upper half' : 'was scrolled to the top'}`, `top ${s.strangerTop}px of ${H}px, scrollY ${s.scrollY}`)
 
   // 10 seconds, other way: paste an id
@@ -317,13 +399,15 @@ async function walk(browser, { mode, w }) {
   await settled(page)
   await scrollSettled(page)
   s = await snap(page)
-  check(s.shownId === tx(1).id && s.checkedKey === 'bob' && s.explorerHref === explorerTx(tx(1).id), `${tag}: "Hold the seance" shows demo 1, picks Bob's key, links to the explorer`)
-  expectHeard(s, tx(1), 'bob', `${tag}: Bob's key on demo 1`)
+  check(s.shownId === tx(1).id && s.checkedKey === 'bob' && s.explorerHref === explorerTx(tx(1).id), `${tag}: "Hold the seance" shows demo ${demoNo(tx(1))}, picks Bob's key, links to the explorer`)
+  expectHeard(s, tx(1), 'bob', `${tag}: Bob's key on demo ${demoNo(tx(1))}`)
+  leaksChecks(s, tx(1), `${tag} demo ${demoNo(tx(1))}`)
+  check(s.auditEmpty?.startsWith(AUDIT_NO_PROOF) && s.auditReadings.length === 0, `${tag}: a demo without an audit key leaves the Auditor nothing to count, and it says why`, s.auditEmpty ?? '')
   check(!s.strangerText.includes(tx(1).memo) && !s.strangerText.includes(tari(tx(1).amount)), `${tag}: the Stranger's card shows neither the memo nor the amount`)
   check(/Read inside this page with Bob's key\. Nothing was sent anywhere\./.test(s.readingText), `${tag}: the Medium says it listened locally`)
   check(inView(s), `${tag}: after "Hold the seance" the answer is on screen without scrolling by hand`, `top ${s.strangerTop}px of ${H}px`)
   if (live) liveBodies.set(`${w}:${tx(1).id}`, s.strangerBody)
-  else if (liveBodies.has(`${w}:${tx(1).id}`)) check(liveBodies.get(`${w}:${tx(1).id}`) === s.strangerBody, `${tag}: the Stranger's card for demo 1 is word for word the same as in the live run`)
+  else if (liveBodies.has(`${w}:${tx(1).id}`)) check(liveBodies.get(`${w}:${tx(1).id}`) === s.strangerBody, `${tag}: the Stranger's card for demo ${demoNo(tx(1))} is word for word the same as in the live run`)
   await seeLenses(page)
   await shot(page, `seance-${w}-${mode}-bob.png`)
   if (wide) await shot(page, `seance-${w}-${mode}-bob-full.png`, { fullPage: true })
@@ -333,7 +417,7 @@ async function walk(browser, { mode, w }) {
     await armReading(page)
     await page.click(`input[name=key][value="${name}"]`)
     s = await heard(page)
-    expectHeard(s, tx(1), name, `${tag}: ${name}'s key on demo 1`)
+    expectHeard(s, tx(1), name, `${tag}: ${name}'s key on demo ${demoNo(tx(1))}`)
     if (name === 'eve') {
       // side by side: the three cards from their heading; one column: the end of the Medium card, where its answer is
       if (wide) await seeLenses(page)
@@ -374,7 +458,8 @@ async function walk(browser, { mode, w }) {
   await settled(page)
   s = await heard(page)
   check(s.shownId === tx(11).id && /revealed the amount on purpose/.test(s.status), `${tag}: the revealed-amount demo says so`)
-  expectHeard(s, tx(11), 'bob', `${tag}: Bob's key on demo 11 (amount revealed)`)
+  expectHeard(s, tx(11), 'bob', `${tag}: Bob's key on demo ${demoNo(tx(11))} (amount revealed)`)
+  leaksChecks(s, tx(11), `${tag} demo ${demoNo(tx(11))}`)
 
   // more demos
   const more = live ? (w === 1280 ? [7] : []) : [2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -384,9 +469,10 @@ async function walk(browser, { mode, w }) {
     await page.click('#hold')
     await settled(page)
     s = await heard(page)
-    check(s.shownId === tx(n).id && s.checkedKey === tx(n).to, `${tag}: demo ${n} shows its id and picks ${tx(n).to}'s key`)
-    expectHeard(s, tx(n), tx(n).to, `${tag}: demo ${n} read by ${tx(n).to}`)
+    check(s.shownId === tx(n).id && s.checkedKey === tx(n).to, `${tag}: demo ${demoNo(tx(n))} shows its id and picks ${tx(n).to}'s key`)
+    expectHeard(s, tx(n), tx(n).to, `${tag}: demo ${demoNo(tx(n))} read by ${tx(n).to}`)
   }
+  await auditorWalk(page, tag, { live, w, wide, which: live ? (w === 1280 ? [1, 4] : [1]) : [1, 2, 3, 4] })
   if (!live) {
     const was = s.badge
     check(was === 'Recorded', `${tag}: the page stayed in recorded mode throughout`)
@@ -405,6 +491,7 @@ async function walk(browser, { mode, w }) {
   s = await snap(page)
   check(/^A transaction id is 64 hexadecimal characters/.test(s.status) && /error/.test(s.statusClass) && log.requests.length === before, `${tag}: a malformed id is refused without a request`)
   check(s.statusInView, `${tag}: the page brings the error message into view`)
+  check(s.leaksEmpty === NO_LEAKS && s.auditEmpty === AUDIT_NO_TX && s.leaks.length === 0, `${tag}: after an error the leaks panel and the Auditor wait again, and show nothing from the earlier transaction`, `${s.leaksEmpty} | ${s.auditEmpty}`)
 
   // the judge path is done: nothing may have gone wrong in the console
   const bad = consoleBad(log)
@@ -420,11 +507,20 @@ async function walk(browser, { mode, w }) {
   await settled(page)
   await heard(page)
   await layout(page, `${tag} loaded`, { wide })
-  await axe(page, `${tag} loaded (Bob reads demo 1)`)
+  await axe(page, `${tag} loaded (Bob reads demo ${demoNo(tx(1))}, no audit key)`)
+  await armReading(page)
+  await armAudit(page)
+  await page.select('#demo', hero(1).id)
+  await page.click('#hold')
+  await settled(page)
+  await heard(page)
+  await counted(page)
+  await layout(page, `${tag} all three ghosts at work`, { wide })
+  await axe(page, `${tag} all three ghosts at work (demo ${demoNo(hero(1))})`)
   if (!wide) {
     await page.evaluate(() => document.querySelectorAll('#stranger details').forEach((d) => (d.open = true)))
-    await layout(page, `${tag} with every note and ciphertext opened`, { wide })
-    await axe(page, `${tag} with every note and ciphertext opened`)
+    await layout(page, `${tag} with every note, audit proof and ciphertext opened`, { wide })
+    await axe(page, `${tag} with every note, audit proof and ciphertext opened`)
     await page.evaluate(() => document.querySelector('#stranger details.note').scrollIntoView())
     await shot(page, `seance-${w}-${mode}-note-open.png`)
   }
@@ -450,6 +546,171 @@ async function walk(browser, { mode, w }) {
   await page.close()
 }
 
+// ---------- the "what still leaks" panel and the Poltergeist ----------
+function poltergeistChecks(s, tag) {
+  const shown = s.polt.map((t) => [t.id, ...t.results.map((r) => r.num)])
+  check(JSON.stringify(shown) === JSON.stringify(POLT), `${tag}: the Poltergeist shows its five tricks, scored as the tests expect`, shown.map((r) => r.join(' / ')).join('; '))
+  check(s.polt.every((t) => t.results.length === 2 && t.results[0].label === 'Transparent ledger synthetic' && t.results[1].label === 'Tari recorded, real'), `${tag}: every result says which ledger it is from: "synthetic" for the transparent one, "recorded, real" for Tari`)
+  check(/^The transparent ledger is synthetic\./.test(s.synthetic ?? '') && /^On the synthetic transparent ledger/.test(s.verdict ?? '') && /On Tari,/.test(s.verdict ?? ''), `${tag}: the page says the transparent ledger is synthetic, and so does the verdict`, s.verdict ?? '')
+}
+
+function leaksChecks(s, t, tag) {
+  const item = (id) => s.leaks.find((l) => l.id === id)?.text ?? ''
+  const audited = ledger.hero.includes(t)
+  const open = (t.expected.revealedOut ?? []).map((o) => `Paid out in the open: ${money(t, o.amount)}`)
+  const spent = item('spent').match(/[0-9a-f]{12}…[0-9a-f]{12}/g) ?? []
+  check(s.shownId === t.id && s.leaks.map((l) => l.id).join() === LEAK_IDS.join(), `${tag}: the leaks panel lists its ${LEAK_IDS.length} items in order, for the transaction on show`, s.leaks.map((l) => l.id).join())
+  const bad = []
+  if (!item('token').includes(audited ? ledger.auditor.resource : TARI_RESOURCE)) bad.push('token')
+  if (!(audited ? /2 of 2 sealed notes carry an audit proof/ : /None here\./).test(item('audit'))) bad.push('audit')
+  if (!(open.length ? open.every((o) => item('revealed').includes(o)) : /None/.test(item('revealed')))) bad.push('revealed')
+  if (!item('fee').includes(tari(t.expected.fee))) bad.push('fee')
+  check(bad.length === 0, `${tag}: the panel's token, audit proofs, amounts in the open and fee are this transaction's`, bad.join(', '))
+  check(spent.length >= 1 && spent.every((c) => s.strangerText.includes(c)), `${tag}: the spent notes in the panel are the ones the Stranger's card shows (${spent.length})`)
+}
+
+// ---------- the Auditor, the third ghost ----------
+function auditReads(s, t, label) {
+  const want = t.expected.outputs.map((o, i, all) => ({ term: `Sealed note ${i + 1} of ${all.length} counted`, amount: money(t, o.auditor), memo: SHUT }))
+  check(s.shownId === t.id && JSON.stringify(s.auditReadings) === JSON.stringify(want), `${label} counts ${want.map((x) => x.amount).join(' + ')} and says the memo is shut`, JSON.stringify(s.auditReadings))
+  check(!s.auditText.includes(t.memo) && !s.strangerText.includes(t.memo) && !s.strangerText.includes(money(t, t.amount)), `${label}: the memo is in neither the Auditor's card nor the Stranger's, and the Stranger's card shows no amount`)
+}
+
+async function auditorWalk(page, tag, { live, w, wide, which }) {
+  const mode = live ? 'live' : 'recorded'
+  const t = hero(1)
+  const d = `${tag} demo ${demoNo(t)}`
+  await page.evaluate(() => {
+    window.__long = []
+  })
+  await page.select('#demo', t.id)
+  await armReading(page)
+  await armAudit(page)
+  const t0 = Date.now()
+  await page.click('#hold')
+  await settled(page)
+  await heard(page)
+  let s = await counted(page)
+  const took = Date.now() - t0
+  const run = await traced(page)
+  check(s.shownId === t.id && s.checkedKey === 'bob' && s.auditChecked === 'auditor' && s.explorerHref === explorerTx(t.id), `${d}: "Hold the seance" hands Bob's key to the Medium and the audit key to the Auditor`)
+  check(/ Paid in the demo token SEANCE, which has an audit key\./.test(s.status) && (live ? /^Live:/ : /^Recorded:/).test(s.source ?? ''), `${d}: the status line says the token has an audit key; the Stranger says where the data came from`, `${s.source}`)
+  auditReads(s, t, `${d}: the audit key`)
+  expectHeard(s, t, 'bob', `${d}: Bob's key`)
+  leaksChecks(s, t, d)
+  if (live) liveBodies.set(`${w}:${t.id}`, s.strangerBody)
+  else if (liveBodies.has(`${w}:${t.id}`)) check(liveBodies.get(`${w}:${t.id}`) === s.strangerBody, `${d}: the Stranger's card, audit proofs included, is word for word the same as in the live run`)
+  const ticks = new Set(run.bars.map((b) => b.tick))
+  check(run.bars.length >= 10 && ticks.size >= 10 && run.bars.every((b) => b.max === 50000 && b.value > 0 && b.value <= b.max && b.label === 'Counting the amounts' && /^Note [12] of 2: amounts up to [\d,]+ tried$/.test(b.tick)), `${d}: while it counts, the Auditor shows a progress bar and the count so far (${run.bars.length} updates)`, JSON.stringify(run.bars.slice(0, 2)))
+  check(run.cards === 1, `${d}: the "Counting…" card is drawn once, so a screen reader hears it once and not once per slice`, `${run.cards}`)
+  const longest = Math.max(0, ...run.long)
+  check(longest < 100, `${d}: the page never froze for 100 ms while the audit key counted (${took} ms in all; longest task ${longest} ms; ${run.long.length} tasks of 50 ms or more)`, run.long.join(' '))
+  await page.evaluate((onTheSide) => document.getElementById('audit-reading').scrollIntoView({ block: onTheSide ? 'center' : 'end' }), wide)
+  await shot(page, `seance-${w}-${mode}-ghosts.png`)
+  await shotEl(page, '#leaks', `seance-${w}-${mode}-leaks.png`)
+
+  // a key that is not the audit key hears nothing at all
+  for (const name of ['bob', 'eve']) {
+    await armAudit(page)
+    await page.click(`input[name=audit-key][value="${name}"]`)
+    s = await counted(page)
+    check(s.auditQuiet === QUIET && s.auditReadings.length === 0 && !/SEANCE|\d/.test(s.auditText), `${d}: ${name}'s key in the Auditor: silence ("${QUIET}"), no amount shown`, s.auditText.slice(0, 80))
+  }
+  // and the audit key opens no memo: handed to the Medium it hears nothing
+  await armReading(page)
+  await page.click('input[name=key][value="auditor"]')
+  s = await heard(page)
+  expectHeard(s, t, 'auditor', `${d}: the audit key handed to the Medium`)
+  await armReading(page)
+  await page.click('input[name=key][value="bob"]')
+  await heard(page)
+  // the key is changed while the search is running: the old search must stop and leave nothing behind
+  await armAudit(page)
+  await page.click('input[name=audit-key][value="auditor"]')
+  await until(page, () => document.querySelector('#audit-reading .counting'), undefined, 5000)
+  await page.click('input[name=audit-key][value="bob"]')
+  await counted(page)
+  await sleep(2500) // longer than the whole search takes
+  s = await snap(page)
+  check(s.auditQuiet === QUIET && s.auditReadings.length === 0, `${d}: a key changed in the middle of the count stops the old search, and nothing from it shows up later`)
+  await armAudit(page)
+  await page.click('input[name=audit-key][value="auditor"]')
+  s = await counted(page)
+  auditReads(s, t, `${d}: after the detour, the audit key`)
+
+  for (const n of which.filter((x) => x !== 1)) {
+    const u = hero(n)
+    const e = `${tag} demo ${demoNo(u)}`
+    await page.select('#demo', u.id)
+    await armReading(page)
+    await armAudit(page)
+    await page.click('#hold')
+    await settled(page)
+    await heard(page)
+    s = await counted(page)
+    check(s.shownId === u.id && s.checkedKey === u.to && s.auditChecked === 'auditor', `${e}: shows its id, picks ${u.to}'s key for the Medium and the audit key for the Auditor`)
+    auditReads(s, u, `${e}: the audit key`)
+    expectHeard(s, u, u.to, `${e}: ${u.to}'s key`)
+    leaksChecks(s, u, e)
+  }
+  const all = Math.max(0, ...(await page.evaluate(() => window.__long)))
+  check(all < 100, `${tag}: no task of 100 ms or more anywhere in the Auditor walk (longest ${all} ms)`)
+}
+
+// The same on a phone four times slower: the slices adapt to the speed, so the page still never freezes, only the count takes longer.
+async function slowRun(browser) {
+  const tag = 'auditor on a slow phone (390px, CPU 4x slower)'
+  const t = hero(1)
+  const { page } = await open(browser, { w: 390 })
+  await page.click('#mode-switch')
+  // control: a block of 120 ms that the page runs as a task of its own (a loop inside page.evaluate is not one and goes unreported), so "no long task" below proves something
+  await page.evaluate(() => {
+    window.__long = [] // whatever the page load took does not count
+    setTimeout(() => {
+      const t0 = performance.now()
+      while (performance.now() - t0 < 120);
+    }, 0)
+  })
+  await sleep(500)
+  const control = Math.max(0, ...(await page.evaluate(() => window.__long)))
+  check(control >= 100, `${tag}: control: the long-task observer sees a deliberate 120 ms block`, `${control} ms`)
+  const cdp = await page.createCDPSession()
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
+  await page.evaluate(() => {
+    window.__long = []
+  })
+  await page.select('#demo', t.id)
+  await armReading(page)
+  await armAudit(page)
+  await page.click('#hold')
+  await settled(page)
+  await page.evaluate(() => document.getElementById('audit-reading').scrollIntoView({ block: 'center' }))
+  await until(page, () => document.querySelector('#audit-reading progress.tally')?.value > 5000, undefined, 30000)
+  await page.screenshot({ path: join(EVID, 'seance-390-recorded-auditor-counting.png'), type: 'png' }) // mid-count
+  const s = await counted(page, 120000)
+  const first = await traced(page)
+  auditReads(s, t, `${tag}: the audit key`)
+  // The click also draws the Stranger and the Medium, which on a slow CPU is a task of its own (about 80 ms at 4x here, not the Auditor's), so the
+  // Auditor is timed on its own: another key, then the audit key again, with nothing else drawn.
+  await page.click('input[name=audit-key][value="eve"]')
+  await until(page, () => document.querySelector('#audit-reading .silence'), undefined, 30000)
+  await armAudit(page)
+  await page.evaluate(() => {
+    window.__long = []
+  })
+  const t1 = Date.now()
+  await page.click('input[name=audit-key][value="auditor"]')
+  const again = await counted(page, 120000)
+  const took = Date.now() - t1
+  const run = await traced(page)
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
+  auditReads(again, t, `${tag}, counted again: the audit key`)
+  const longest = Math.max(0, ...run.long)
+  check(longest < 100 && run.bars.length >= 10 && run.cards === 1, `${tag}: the Auditor never froze the page for 100 ms (${took} ms in all; longest task ${longest} ms; ${run.long.length} tasks of 50 ms or more; ${run.bars.length} progress updates; "Counting" card drawn ${run.cards} time)`, run.long.join(' '))
+  check(Math.max(0, ...first.long) < 200, `${tag}: drawing the cards at the click, with the first slice, took no task of 200 ms or more (longest ${Math.max(0, ...first.long)} ms)`)
+  await page.close()
+}
+
 // ---------- the indexer goes away ----------
 async function fallbackRun(browser, w) {
   const tag = `auto-fallback ${w}px`
@@ -463,12 +724,21 @@ async function fallbackRun(browser, w) {
   await armReading(page)
   await page.click('input[name=key][value="carol"]')
   s = await heard(page)
-  expectHeard(s, tx(2), 'carol', `${tag}: Carol's key reads demo 2 from the recording`)
+  expectHeard(s, tx(2), 'carol', `${tag}: Carol's key reads demo ${demoNo(tx(2))} from the recording`)
   await page.select('#demo', tx(1).id)
   await page.click('#hold')
   await settled(page)
   s = await snap(page)
   check(s.shownId === tx(1).id && asked() === 1, `${tag}: further lookups are answered from the recording without asking again`, `${asked()} requests`)
+  await armReading(page)
+  await armAudit(page)
+  await page.select('#demo', hero(4).id)
+  await page.click('#hold')
+  await settled(page)
+  await heard(page)
+  s = await counted(page)
+  check(asked() === 1, `${tag}: the Auditor counts a demo with an audit key from the recording too, with no new request`, `${asked()} requests`)
+  auditReads(s, hero(4), `${tag}: demo ${demoNo(hero(4))}, the audit key`)
   const bad = consoleBad(log).filter((m) => !(m.type === 'error' && m.url.startsWith(INDEXER_URL) && /Failed to load resource/.test(m.text)))
   check(bad.length === 0 && log.pageErrors.length === 0, `${tag}: no console error except the browser's own note that the indexer request failed`, bad.map((m) => m.text).concat(log.pageErrors).join(' | '))
   await page.click('#mode-switch')
@@ -525,20 +795,33 @@ async function keyboardRun(browser) {
   await press('Tab', 3)
   check((await active()) === 'demo', `${tag}: Tab, Tab, Tab reaches the demo list`, await active())
   await press('ArrowDown')
-  check((await page.evaluate(() => document.getElementById('demo').selectedIndex)) === 1, `${tag}: the arrow key picks the next demo`)
+  check((await page.evaluate(() => document.getElementById('demo').selectedIndex)) === 1, `${tag}: the arrow key picks the next demo (demo 2, the second one with an audit key)`)
   await press('Tab')
   await armReading(page)
+  await armAudit(page)
   await press('Enter')
   await settled(page)
   s = await heard(page)
-  check(s.shownId === tx(2).id && s.checkedKey === 'carol' && (await active()) === 'hold', `${tag}: Enter on "Hold the seance" loads demo 2 and focus stays on the button`, await active())
-  expectHeard(s, tx(2), 'carol', `${tag}: Carol's key on demo 2`)
+  check(s.shownId === hero(2).id && s.checkedKey === 'carol' && (await active()) === 'hold', `${tag}: Enter on "Hold the seance" loads demo 2 and focus stays on the button`, await active())
+  expectHeard(s, hero(2), 'carol', `${tag}: Carol's key on demo 2`)
+  s = await counted(page)
+  auditReads(s, hero(2), `${tag}: the audit key on demo 2`)
   await page.focus('input[name=key]:checked')
   await armReading(page)
   await press('ArrowDown')
   s = await heard(page)
   check(s.checkedKey === 'eve', `${tag}: the arrow keys move through the keys (carol to eve)`)
-  expectHeard(s, tx(2), 'eve', `${tag}: Eve's key on demo 2 by keyboard`)
+  expectHeard(s, hero(2), 'eve', `${tag}: Eve's key on demo 2 by keyboard`)
+  await page.focus('input[name=audit-key]:checked')
+  await armAudit(page)
+  await press('ArrowUp')
+  s = await counted(page)
+  check(s.auditChecked === 'eve' && s.auditQuiet === QUIET, `${tag}: the arrow keys move through the Auditor's keys too (audit key to Eve's key: silence)`, `${s.auditChecked}`)
+  await armAudit(page)
+  await press('ArrowDown')
+  s = await counted(page)
+  check(s.auditChecked === 'auditor', `${tag}: ArrowDown brings the audit key back`, `${s.auditChecked}`)
+  auditReads(s, hero(2), `${tag}: demo 2, the audit key again`)
   await page.focus('#summon')
   await press('Space')
   await settled(page)
@@ -556,17 +839,28 @@ async function motionRun(browser) {
     await settled(page)
     return page.evaluate(() => getComputedStyle(document.querySelector('#reading .reading')).animationName)
   }
+  const probeAudit = async (page) => {
+    await page.select('#demo', hero(4).id) // 250 + 7,239: counted in a moment, but over many slices
+    await armAudit(page)
+    await page.click('#hold')
+    await settled(page)
+    await counted(page)
+    return page.evaluate(() => ({ reading: getComputedStyle(document.querySelector('#audit-reading .reading')).animationName, bars: window.__bars.map((b) => b.motion) }))
+  }
   const normal = await open(browser, { w: 1280 })
   await normal.page.click('#mode-switch')
   const n1 = await anim(normal.page)
   const n2 = await probeReading(normal.page)
-  check(n1.flame === 'flicker' && n2 === 'rise', 'motion: by default the flame flickers and a reading fades in (control)', `${n1.flame}, ${n2}`)
+  const n3 = await probeAudit(normal.page)
+  check(n1.flame === 'flicker' && n2 === 'rise' && n3.reading === 'rise', 'motion: by default the flame flickers and the readings of the Medium and the Auditor fade in (control)', `${n1.flame}, ${n2}, ${n3.reading}`)
   await normal.page.close()
   const calm = await open(browser, { w: 390, reduce: true })
   await calm.page.click('#mode-switch')
   const c1 = await anim(calm.page)
   const c2 = await probeReading(calm.page)
-  check(c1.flame === 'none' && c2 === 'none' && c1.scroll === 'auto', 'motion: with prefers-reduced-motion the flame is still, readings do not fade in, scrolling is instant', `${c1.flame}, ${c2}, ${c1.scroll}`)
+  const c3 = await probeAudit(calm.page)
+  check(c1.flame === 'none' && c2 === 'none' && c3.reading === 'none' && c1.scroll === 'auto', 'motion: with prefers-reduced-motion the flame is still, readings (the Auditor\'s too) do not fade in, scrolling is instant', `${c1.flame}, ${c2}, ${c3.reading}, ${c1.scroll}`)
+  check(c3.bars.length > 0 && c3.bars.every((m) => m === 'none/0s'), 'motion: with prefers-reduced-motion the Auditor still shows its progress bar, and nothing about it is animated', `${c3.bars.length} updates: ${[...new Set(c3.bars)].join(' ')}`)
   const y1 = await scrollSettled(calm.page)
   const s = await snap(calm.page)
   check(Math.abs(s.strangerTop) <= 24, 'motion: reduced motion still scrolls to the answer on a phone', `top ${s.strangerTop}px, scrollY ${y1}`)
@@ -701,9 +995,10 @@ try {
   section('the indexer goes away')
   for (const w of [1280, 390]) await scenario(`fallback ${w}`, () => fallbackRun(offline, w))
   await scenario('hang', () => hangRun(online))
-  section('keyboard, reduced motion, policy')
+  section('keyboard, reduced motion, a slow phone, policy')
   await scenario('keyboard', () => keyboardRun(offline))
   await scenario('motion', () => motionRun(offline))
+  await scenario('slow auditor', () => slowRun(offline))
   await scenario('csp', () => cspRun(online))
 } finally {
   await online.close()

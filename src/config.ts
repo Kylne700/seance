@@ -7,3 +7,5 @@ export const INDEXER_TIMEOUT_MS = 8000
 export const RECENT_LIMIT = 40
 // Verified in headless Chromium: this page renders "Transaction <id> ... Commit" for a real id.
 export const explorerTx = (id: string): string => `${EXPLORER_URL}/tx/${id}`
+// The demo token (made by template/, with an audit key). scripts/make-hero.mjs records the same address in ledger.json, and a test keeps the two equal.
+export const SEANCE_RESOURCE = 'resource_3308e69cbcd47df3fa3e0b2467e50e9ec7502c955822574c3e03c045f37ee2a8'

@@ -30,8 +30,8 @@ const byId = (list: ReturnType<typeof leaks>): Record<LeakId, string[]> => Objec
 
 describe('the panel', () => {
   const view = parseTransaction(txs[0].reply)
-  it('has the nine items of the brief, once each, in a fixed order', () => {
-    expect(leaks(view).map((l) => l.id)).toEqual(['token', 'spent', 'created', 'revealed', 'rule', 'times', 'epochs', 'fee', 'length'])
+  it('has the nine items of the brief and the audit proofs, once each, in a fixed order', () => {
+    expect(leaks(view).map((l) => l.id)).toEqual(['token', 'audit', 'spent', 'created', 'revealed', 'rule', 'times', 'epochs', 'fee', 'length'])
   })
   it('gives every item one plain caption that names no fix', () => {
     for (const l of leaks(view)) {
@@ -52,6 +52,8 @@ describe('each field is read from the raw reply', () => {
       const fee = Number(one(tx.reply, 'total_fees_paid'))
 
       expect(got.token).toEqual([one(one(tx.reply, 'resource_address_ref'), 'Address')])
+      expect(got.audit, 'a TARI payment carries no audit proof').toEqual([])
+      expect(all(tx.reply, 'viewable_balance_proof').filter((p) => p != null)).toEqual([])
       expect(got.spent).toEqual(stmt.inputs.map((i) => short(i.commitment, 12)))
       expect(got.created).toEqual([plural(outs.length, 'sealed note')])
       expect(got.revealed).toEqual([`Paid out in the open: ${tari(String(reveal.amount))}${Number(reveal.amount) === fee ? ', the network fee' : ''} (key ${short(reveal.receiver, 6)})`])
@@ -62,6 +64,21 @@ describe('each field is read from the raw reply', () => {
       expect(got.epochs).toEqual([`Any epoch up to ${Number(one(tx.reply, 'max_epoch'))}`])
       expect(got.fee).toEqual([tari(fee)])
       expect(got.length).toEqual(outs.map((hex, i) => `Note ${i + 1}: ${hex.length / 2} bytes, ${hex.length / 2 <= NO_MEMO_BYTES ? 'no memo' : 'a memo is inside'}`))
+    })
+  }
+})
+
+describe('the audit-key transactions', () => {
+  for (const tx of ledger.hero as unknown as { key: string; id: string; reply: unknown }[]) {
+    it(`${tx.key} ${tx.id.slice(0, 10)}: two audit proofs, and no amount in the open`, () => {
+      const got = byId(leaks(parseTransaction(tx.reply)))
+      const proofs = all(tx.reply, 'viewable_balance_proof').filter((p) => p != null)
+      expect(proofs.length).toBe(2)
+      expect(got.audit).toEqual([`${proofs.length} of 2 sealed notes carry an audit proof`])
+      expect(got.token).toEqual([ledger.auditor.resource])
+      expect(got.revealed, 'a stranger reads no amount from this one').toEqual([])
+      expect(got.spent.length).toBe(1)
+      expect(got.created).toEqual(['2 sealed notes'])
     })
   }
 })
@@ -98,9 +115,9 @@ describe('change one field and only its item changes', () => {
     return byId(leaks(v))
   }
   const before = byId(leaks(base))
-  const only = (id: LeakId, changed: Record<LeakId, string[]>): void => {
+  const only = (id: LeakId, changed: Record<LeakId, string[]>, ...alsoMoves: LeakId[]): void => {
     for (const k of Object.keys(before) as LeakId[]) {
-      if (k === id) expect(changed[k], k).not.toEqual(before[k])
+      if (k === id || alsoMoves.includes(k)) expect(changed[k], k).not.toEqual(before[k])
       else expect(changed[k], `${k} must not move when ${id} does`).toEqual(before[k])
     }
   }
@@ -108,7 +125,18 @@ describe('change one field and only its item changes', () => {
   it('token', () => {
     const c = edit((v) => (v.statements[0].resource = 'resource_' + 'ab'.repeat(32)))
     expect(c.token).toEqual(['resource_' + 'ab'.repeat(32)])
-    only('token', c)
+    expect(c.revealed[0], 'an amount is shown in the unit of its token, and this token is unknown').toMatch(/^Paid out in the open: 100,000 base units, the network fee/)
+    only('token', c, 'revealed')
+  })
+  it('audit proofs', () => {
+    expect(before.audit).toEqual([])
+    const c = edit((v) => (v.statements[0].outputs[0].viewableBalanceProof = '{}'))
+    expect(c.audit).toEqual(['1 of 2 sealed notes carry an audit proof'])
+    only('audit', c)
+    const both = edit((v) => v.statements[0].outputs.forEach((o) => (o.viewableBalanceProof = '{}')))
+    expect(both.audit).toEqual(['2 of 2 sealed notes carry an audit proof'])
+    const one = edit((v) => ((v.statements[0].outputs = v.statements[0].outputs.slice(0, 1)), (v.statements[0].outputs[0].viewableBalanceProof = '{}')))
+    expect(one.audit).toEqual(['1 of 1 sealed note carries an audit proof'])
   })
   it('spent notes', () => {
     const c = edit((v) => v.statements[0].inputCommitments.push('cd'.repeat(32)))

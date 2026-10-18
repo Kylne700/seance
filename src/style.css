@@ -94,7 +94,6 @@ input[type='text']:focus-visible, select:focus-visible { border-color: var(--foc
 .badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: .8125rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border: 1px solid transparent; }
 .badge.live { background: #12332a; color: var(--mint); border-color: #276654; }
 .badge.recorded { background: #3a2a10; color: var(--amber); border-color: #7a5520; }
-.badge.soon { background: #2a2250; color: var(--violet); border-color: #54468f; }
 
 .status { margin: 12px 0 0; min-height: 1.6em; color: var(--muted); }
 .status.warn { color: var(--amber); }
@@ -107,7 +106,6 @@ input[type='text']:focus-visible, select:focus-visible { border-color: var(--foc
 .lens { scroll-margin-top: 16px; min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 16px; }
 @media (min-width: 700px) { .lens { padding: 24px; } }
 @media (min-width: 960px) { .lens { padding: 20px; } }
-@media (min-width: 960px) and (min-height: 700px) { .lens.medium { position: sticky; top: 16px; } }
 .lens-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
 .lens-head h3 { font-size: 1.375rem; }
 .role { color: var(--muted); margin: 4px 0 0; font-size: .9375rem; }
@@ -118,8 +116,6 @@ input[type='text']:focus-visible, select:focus-visible { border-color: var(--foc
 .spirit .flame { fill: var(--amber); }
 .medium .spirit .body { fill: #f0e4d2; }
 .stranger .spirit .body { fill: #9fb0cf; }
-.lens.soon { border-style: dashed; background: transparent; }
-.lens.soon .spirit { opacity: .7; }
 .lens-body > p { color: var(--muted); }
 
 .empty { color: var(--muted); font-style: italic; }
@@ -209,8 +205,12 @@ summary .peek { font-family: var(--mono); font-size: .8125rem; color: var(--mute
 .choice input { width: 22px; height: 22px; flex: none; accent-color: var(--amber); margin: 0; }
 #own-key { margin-bottom: 8px; }
 
+/* The Auditor counts in slices; the bar shows how far the search has come. A determinate bar has no motion of its own. */
+.tally { display: block; width: 100%; height: 14px; margin: 10px 0 4px; accent-color: var(--amber); }
+.tick { margin: 0 0 8px; color: var(--muted); font-size: .875rem; }
+
 .reading-box { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); min-height: 6rem; }
-.reading .amount { font: 600 clamp(1.75rem, 6vw, 2.25rem)/1.2 var(--serif); color: var(--amber); margin: 0 0 6px; text-shadow: 0 0 22px rgba(255, 180, 84, .35); }
+.reading .amount { font: 600 clamp(1.5rem, 4vw, 1.875rem)/1.2 var(--serif); color: var(--amber); margin: 0 0 6px; text-shadow: 0 0 22px rgba(255, 180, 84, .35); }
 .reading .memo { font: italic 1.25rem/1.4 var(--serif); margin: 0 0 6px; color: var(--text); }
 .reading .memo.none { font-style: normal; font-family: var(--sans); font-size: 1rem; color: var(--muted); }
 .quiet { font: italic 1.375rem/1.3 var(--serif); color: var(--violet); margin: 0 0 6px; }

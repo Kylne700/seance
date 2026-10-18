@@ -1,10 +1,11 @@
 // Turns parsed data into DOM. Everything that comes from the chain (ids, hex, memos) goes in as text, never as HTML.
+import { RANGE_MAX, type Heard } from './auditor.ts'
 import type { StealthOutput, StealthStatement, TxView } from './chain.ts'
 import { explorerTx } from './config.ts'
 import type { Shown } from './data.ts'
 import type { Reading } from './decrypt.ts'
 import { clear, h } from './dom.ts'
-import { outcomeLabel, plural, short, tari, when } from './format.ts'
+import { amountOf, baseUnits, outcomeLabel, plural, short, tari, when } from './format.ts'
 import { leaks, paysFee, type Leak } from './leaks.ts'
 import { notes, summary, TRICKS, type Report, type Score, type TrickId } from './poltergeist.ts'
 
@@ -16,6 +17,7 @@ const KIND_CAPTION: Record<string, string> = {
   TakeFromBucket: 'Splits a public amount off the revealed funds.',
   PayFeeFromBucket: 'Pays the network fee, in the open.',
   CreateAccount: 'Opens a public account for a receiver.',
+  CallMethod: 'Calls a component, for example to take the fee funds out of a public account.',
 }
 
 const fact = (term: string, ...value: (Node | string)[]): HTMLElement => h('div', { class: 'fact' }, h('dt', null, term), h('dd', null, ...value))
@@ -54,6 +56,15 @@ function note(o: StealthOutput, i: number, total: number): HTMLElement {
       hex(o.ciphertext),
       caption(`This is the ciphertext, ${o.ciphertextBytes} bytes: the amount and the memo, locked to the recipient. The size leaks a little: a note without a memo is 80 bytes, a note with one is longer.`),
     ),
+    o.viewableBalanceProof
+      ? h(
+          'details',
+          { class: 'bytes' },
+          h('summary', null, 'The audit proof ', h('span', { class: 'peek' }, `${o.viewableBalanceProof.length} characters`)),
+          hex(o.viewableBalanceProof),
+          caption("An extra copy of the amount, locked to the token's audit key, with a proof that it matches the commitment. Everyone can see it. Only the audit key opens it, and that key cannot spend the note or read its memo."),
+        )
+      : null,
     h('p', { class: 'term' }, 'Spend rule'),
     caption(o.spendCondition === 'Key' ? 'Key: only the holder of one private key can spend this note.' : `${o.spendCondition}: a rule other than a single key.`),
     h('p', { class: 'veiled' }, h('span', { class: 'bar', 'aria-hidden': 'true' }), 'Amount, memo and receiver: hidden from you'),
@@ -72,8 +83,8 @@ function statement(st: StealthStatement, n: number, feePaid: number | null): HTM
     h(
       'dl',
       { class: 'facts' },
-      st.revealedIn !== '0' ? fact('Taken from the public balance', `${tari(st.revealedIn)}, in the open`) : null,
-      ro ? fact(isFee ? 'Revealed to pay the fee' : 'Revealed in the open', `${tari(ro.amount)} for key ${short(ro.receiver, 6)}`, caption(isFee ? 'This is the network fee. The amount, and the key it names, are in the open, unlike the sealed notes below.' : 'Revealed amounts are readable by everyone, unlike the sealed notes below.')) : null,
+      st.revealedIn !== '0' ? fact('Taken from the public balance', `${amountOf(st.resource, st.revealedIn)}, in the open`) : null,
+      ro ? fact(isFee ? 'Revealed to pay the fee' : 'Revealed in the open', `${amountOf(st.resource, ro.amount)} for key ${short(ro.receiver, 6)}`, caption(isFee ? 'This is the network fee. The amount, and the key it names, are in the open, unlike the sealed notes below.' : 'Revealed amounts are readable by everyone, unlike the sealed notes below.')) : null,
       st.inputCommitments.length ? fact('Spent notes', ...st.inputCommitments.slice(0, MAX_NOTES).map((c) => h('code', { class: 'hex' }, short(c, 12))), caption('Which old notes were spent is public. What was inside them is not.')) : null,
     ),
     ...shown.map((o, i) => note(o, i, st.outputs.length)),
@@ -191,7 +202,7 @@ export function renderReading(el: HTMLElement, hearing: Hearing): void {
             'div',
             { class: 'reading' },
             h('p', { class: 'term' }, `Sealed note ${all.indexOf(r.output) + 1} of ${all.length} opens`),
-            h('p', { class: 'amount' }, tari(r.plain.value)),
+            h('p', { class: 'amount' }, amountOf(r.output.resource, r.plain.value)),
             r.plain.memo ? h('p', { class: 'memo' }, `\u201C${r.plain.memo}\u201D`) : h('p', { class: 'memo none' }, 'No memo'),
           ),
         )
@@ -201,4 +212,62 @@ export function renderReading(el: HTMLElement, hearing: Hearing): void {
       break
     }
   }
+}
+
+/** What the Auditor card shows. `working` is drawn once; `showTally` then moves its bar, so a screen reader hears one announcement, not one per slice. */
+export type Audit =
+  | { kind: 'no-tx' }
+  | { kind: 'no-key' }
+  | { kind: 'no-proof' }
+  | { kind: 'working' }
+  | { kind: 'silence' }
+  | { kind: 'read'; who: string; heard: Heard[]; all: StealthOutput[] }
+
+export function renderAudit(el: HTMLElement, a: Audit): void {
+  clear(el)
+  switch (a.kind) {
+    case 'no-tx':
+      el.append(h('p', { class: 'empty' }, 'The auditor waits for a transaction. Call one up above.'))
+      break
+    case 'no-key':
+      el.append(h('p', { class: 'empty' }, 'Hand the auditor a key and it will count.'))
+      break
+    case 'no-proof':
+      el.append(h('p', { class: 'empty' }, 'Nothing to count. This token has no audit key, so its notes carry no audit proof. Pick a demo from the group \u201CWith an audit key\u201D.'))
+      break
+    case 'working':
+      el.append(
+        h('div', { class: 'counting' }, h('p', { class: 'quiet' }, 'Counting\u2026'), h('progress', { class: 'tally', max: String(RANGE_MAX), value: '0', 'aria-label': 'Counting the amounts' }), h('p', { class: 'tick', 'aria-hidden': 'true' }), caption('There is no shortcut. The key tries every amount from 0 up, a slice at a time, and the page stays awake in between.')),
+      )
+      break
+    case 'silence':
+      el.append(h('div', { class: 'silence' }, h('p', { class: 'quiet' }, 'The spirits are quiet.'), caption('This is not the token\u2019s audit key, so the proofs stay shut. A wrong key hears nothing at all.')))
+      break
+    case 'read': {
+      const { who, heard, all } = a
+      for (const r of heard) {
+        el.append(
+          h(
+            'div',
+            { class: 'reading' },
+            h('p', { class: 'term' }, `Sealed note ${all.indexOf(r.output) + 1} of ${all.length} counted`),
+            r.amount === null ? h('p', { class: 'memo none' }, `More than ${amountOf(r.output.resource, RANGE_MAX)}, past the range this page searches.`) : h('p', { class: 'amount' }, amountOf(r.output.resource, r.amount)),
+            h('p', { class: 'memo none' }, 'Memo: shut. The audit key cannot open it.'),
+          ),
+        )
+      }
+      const bare = all.length - heard.length
+      el.append(caption(`Counted inside this page with ${who}. Nothing was sent anywhere. The search covers 0 to ${amountOf(heard[0].output.resource, RANGE_MAX)}.${bare > 0 ? ` The other ${plural(bare, 'sealed note')} ${bare === 1 ? 'carries' : 'carry'} no proof for this key.` : ''}`))
+      break
+    }
+  }
+}
+
+/** Move the bar of a `working` card. Does nothing if the card has moved on. */
+export function showTally(el: HTMLElement, p: { note: number; notes: number; tried: number }): void {
+  const bar = el.querySelector('progress')
+  const tick = el.querySelector('.tick')
+  if (!bar || !tick) return
+  ;(bar as HTMLProgressElement).value = Math.min(p.tried, Number(RANGE_MAX))
+  tick.textContent = `Note ${p.note} of ${p.notes}: amounts up to ${baseUnits(p.tried)} tried`
 }

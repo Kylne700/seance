@@ -1,9 +1,10 @@
-import { createData, demoKeys, demos, LookupError, recordedWorld, type Shown } from './data.ts'
+import { audit, audited } from './auditor.ts'
+import { createData, demoKeys, demos, LookupError, recordedWorld, type Demo, type Shown } from './data.ts'
 import { isViewSecret, listen } from './decrypt.ts'
 import { clear, h } from './dom.ts'
 import { outcomeLabel, short } from './format.ts'
 import { poltergeist } from './poltergeist.ts'
-import { explorerLink, renderLeaks, renderPoltergeist, renderReading, renderStranger, renderStrangerEmpty, type Hearing } from './render.ts'
+import { explorerLink, renderAudit, renderLeaks, renderPoltergeist, renderReading, renderStranger, renderStrangerEmpty, showTally, type Hearing } from './render.ts'
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const el = document.getElementById(id)
@@ -17,9 +18,11 @@ const strangerBody = $('stranger-body')
 const strangerCard = $('stranger')
 const leaksBody = $('leaks-body')
 const keysBox = $('keys')
+const auditKeysBox = $('audit-keys')
 const ownKey = $<HTMLInputElement>('own-key')
 const ownHint = $('own-hint')
 const reading = $('reading')
+const auditReading = $('audit-reading')
 const mediumActions = $('medium-actions')
 const modeBadge = $('mode-badge')
 const modeText = $('mode-text')
@@ -33,9 +36,11 @@ let current: Shown | null = null
 let busy = false
 let loadSeq = 0 // answers that arrive after a newer request are dropped
 let hearSeq = 0
+let auditSeq = 0
 
 const keyNames = Object.keys(demoKeys)
 const nameOf = (key: string): string => demoKeys[key].label.split(' (')[0]
+const whoOf = (key: string): string => (key === 'auditor' ? 'the audit key' : `${nameOf(key)}'s key`)
 
 function setStatus(text: string, kind: 'info' | 'warn' | 'error' = 'info'): void {
   status.textContent = text
@@ -61,7 +66,7 @@ function chosenKey(): { secret: string; who: string } | { problem: string } | nu
   const own = ownKey.value.trim().toLowerCase()
   if (own) return isViewSecret(own) ? { secret: own, who: 'your key' } : { problem: `A view secret is 64 hexadecimal characters (0-9 and a-f). You have typed ${own.length}.` }
   const radio = keysBox.querySelector<HTMLInputElement>('input[name=key]:checked')
-  return radio ? { secret: demoKeys[radio.value].viewSecret, who: `${nameOf(radio.value)}'s key` } : null
+  return radio ? { secret: demoKeys[radio.value].viewSecret, who: whoOf(radio.value) } : null
 }
 
 async function hear(): Promise<void> {
@@ -79,8 +84,29 @@ async function hear(): Promise<void> {
   if (mine === hearSeq) renderReading(reading, hearing)
 }
 
-function checkRadio(name: string | null): void {
-  for (const r of keysBox.querySelectorAll<HTMLInputElement>('input[name=key]')) r.checked = r.value === name
+// What the auditor counts, from the audit key chosen: only the amounts, only when a note carries a proof, in slices so the page stays awake.
+async function count(): Promise<void> {
+  const mine = ++auditSeq
+  const radio = auditKeysBox.querySelector<HTMLInputElement>('input[name=audit-key]:checked')
+  if (!current) return renderAudit(auditReading, { kind: 'no-tx' })
+  const all = current.view.outputs
+  if (!audited(all).length) return renderAudit(auditReading, { kind: 'no-proof' })
+  if (!radio) return renderAudit(auditReading, { kind: 'no-key' })
+  let started = false
+  const heard = await audit(demoKeys[radio.value].viewSecret, all, {
+    alive: () => mine === auditSeq,
+    progress: (p) => {
+      if (mine !== auditSeq) return
+      if (!started) renderAudit(auditReading, { kind: 'working' }) // drawn only if the search takes a moment: a wrong key is turned away at once
+      started = true
+      showTally(auditReading, p)
+    },
+  })
+  if (heard && mine === auditSeq) renderAudit(auditReading, heard.length ? { kind: 'read', who: whoOf(radio.value), heard, all } : { kind: 'silence' })
+}
+
+function checkRadio(group: 'key' | 'audit-key', value: string | null): void {
+  for (const r of document.querySelectorAll<HTMLInputElement>(`input[name=${group}]`)) r.checked = r.value === value
 }
 
 function describe(s: Shown): string {
@@ -88,6 +114,7 @@ function describe(s: Shown): string {
   if (s.ours) return `Nobody else's private transfer was among the latest transactions, so this is one of the demos we made for this page. ${what}`
   if (s.fellBack) return `The indexer did not answer, so the page switched to recorded data. ${what}`
   if (s.quietChain) return `The latest live transactions held no private transfer, so this one is recorded. ${what}`
+  if (demos.find((d) => d.id === s.view.id)?.kind === 'audited') return `${what} Paid in the demo token SEANCE, which has an audit key. The Medium, with the recipient's key, opens one note (amount and memo). The Auditor, with the audit key, counts the amount of both and cannot read a memo.`
   if (demos.find((d) => d.id === s.view.id)?.kind === 'revealed') return `${what} This sender revealed the amount on purpose, so there is nothing sealed to read: compare the Stranger's view with the other demos.`
   return what
 }
@@ -106,7 +133,7 @@ const cardsFar = (): boolean => {
   return oneColumn.matches || top < 0 || top > window.innerHeight / 2
 }
 
-async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: boolean } = {}): Promise<void> {
+async function load(job: () => Promise<Shown>, opts: { key?: string; auditKey?: string; fromUser?: boolean } = {}): Promise<void> {
   if (busy) return
   const mine = ++loadSeq
   setBusy(true)
@@ -121,13 +148,15 @@ async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: 
     txid.value = shown.view.id
     history.replaceState(null, '', `#tx=${shown.view.id}`)
     if (opts.key) {
-      checkRadio(opts.key)
+      checkRadio('key', opts.key)
       ownKey.value = ''
     }
+    if (opts.auditKey) checkRadio('audit-key', opts.auditKey)
     reflectMode()
     setStatus(describe(shown), shown.fellBack || shown.quietChain ? 'warn' : 'info')
     if (opts.fromUser && cardsFar()) reveal(strangerCard, 'start')
     await hear()
+    void count()
   } catch (e) {
     if (mine !== loadSeq) return
     current = null
@@ -142,15 +171,20 @@ async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: 
     }
     if (opts.fromUser && !onScreen(status)) reveal(status, 'center')
     await hear()
+    void count()
   } finally {
     if (mine === loadSeq) setBusy(false)
   }
 }
 
 // Wire the page.
-for (const d of demos) demo.append(h('option', { value: d.id }, `Demo ${d.n} · ${short(d.id, 6)}${d.kind === 'revealed' ? ' · revealed amount' : ''}`))
-for (const key of keyNames) {
-  keysBox.append(h('label', { class: 'choice' }, h('input', { type: 'radio', name: 'key', value: key }), h('span', null, demoKeys[key].label)))
+const option = (d: Demo): HTMLElement => h('option', { value: d.id }, `Demo ${d.n} · ${short(d.id, 6)}${d.kind === 'revealed' ? ' · revealed amount' : ''}`)
+demo.append(
+  h('optgroup', { label: 'With an audit key: all three ghosts' }, ...demos.filter((d) => d.kind === 'audited').map(option)),
+  h('optgroup', { label: 'Without: the Stranger and the Medium' }, ...demos.filter((d) => d.kind !== 'audited').map(option)),
+)
+for (const [box, group] of [[keysBox, 'key'], [auditKeysBox, 'audit-key']] as const) {
+  for (const key of keyNames) box.append(h('label', { class: 'choice' }, h('input', { type: 'radio', name: group, value: key }), h('span', null, demoKeys[key].label)))
 }
 
 $('pick').addEventListener('submit', (e) => {
@@ -159,8 +193,8 @@ $('pick').addEventListener('submit', (e) => {
 })
 $('summon').addEventListener('click', () => void load(() => data.recent(), { fromUser: true }))
 $('hold').addEventListener('click', () => {
-  const d = demos[demo.selectedIndex]
-  void load(() => data.lookup(d.id), { key: d.to, fromUser: true })
+  const d = demos.find((x) => x.id === demo.value) as Demo
+  void load(() => data.lookup(d.id), { key: d.to, auditKey: d.kind === 'audited' ? 'auditor' : undefined, fromUser: true })
 })
 modeSwitch.addEventListener('click', () => {
   data.setMode(data.mode === 'live' ? 'recorded' : 'live')
@@ -171,8 +205,9 @@ keysBox.addEventListener('change', () => {
   ownKey.value = ''
   void hear()
 })
+auditKeysBox.addEventListener('change', () => void count())
 ownKey.addEventListener('input', () => {
-  if (ownKey.value.trim()) checkRadio(null)
+  if (ownKey.value.trim()) checkRadio('key', null)
   void hear()
 })
 
@@ -181,5 +216,6 @@ renderStrangerEmpty(strangerBody)
 renderLeaks(leaksBody, null)
 renderPoltergeist($('polt-body'), poltergeist(recordedWorld())) // recorded data only: the same numbers on every visit
 void hear()
+void count()
 const fromHash = /^#tx=([0-9a-f]{64})$/.exec(location.hash)
 if (fromHash) void load(() => data.lookup(fromHash[1]))

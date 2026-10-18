@@ -31,18 +31,27 @@ export interface Shown {
 
 export interface DemoKey {
   label: string
-  address: string
   viewSecret: string
 }
 export interface Demo {
   n: number
   id: string
   to: string
-  kind: 'blinded' | 'revealed'
+  kind: 'blinded' | 'revealed' | 'audited'
 }
 
-export const demoKeys = ledger.keys as Record<string, DemoKey>
-export const demos: Demo[] = (ledger.txs as { id: string; to: string; kind: string }[]).map((t, i) => ({ n: i + 1, id: t.id, to: t.to, kind: t.kind === 'revealed' ? 'revealed' : 'blinded' }))
+// Every key the cards can be handed. The auditor's is published on purpose like the others (testnet only): it is a view key and cannot spend.
+export const demoKeys: Record<string, DemoKey> = {
+  ...(ledger.keys as Record<string, DemoKey>),
+  auditor: { label: "The auditor (holds the demo token's audit key)", viewSecret: ledger.auditor.secret },
+}
+// The prepared transactions: the ones paid in the demo token, which has an audit key (all three ghosts have something to read), then the TARI demos.
+const heroes = ledger.hero as { id: string; to: string }[]
+const tariDemos = ledger.txs as { id: string; to: string; kind: string }[]
+export const demos: Demo[] = [
+  ...heroes.map((t, i) => ({ n: i + 1, id: t.id, to: t.to, kind: 'audited' as const })),
+  ...tariDemos.map((t, i) => ({ n: heroes.length + i + 1, id: t.id, to: t.to, kind: t.kind === 'revealed' ? ('revealed' as const) : ('blinded' as const) })),
+]
 export const recordedAt: string = ledger.recent.capturedAt
 
 // Every transaction we sent for this page (the prepared demos, and the setup behind them). Summon never passes these off as a stranger's.
@@ -51,6 +60,7 @@ export const ourIds: ReadonlySet<string> = new Set([...sent.txs, ...(sent.earlie
 
 const recorded = new Map<string, unknown>([
   ...ledger.txs.map((t) => [t.id, t.reply] as const),
+  ...ledger.hero.map((t) => [t.id, t.reply] as const),
   ...ledger.recent.transactions.map((t) => [t.transaction_id, t] as const),
 ])
 
@@ -72,7 +82,7 @@ export function recordedWorld(): World {
     payments: ledger.txs.map((t) => ({ id: t.id, to: t.to, amount: t.amount })),
     views: ledger.txs.map((t) => parseTransaction(t.reply)),
     crowd: withNotes(ledger.recent.transactions).filter((v) => !ourIds.has(v.id)),
-    accounts: Object.fromEntries(Object.entries(demoKeys).map(([name, k]) => [name, k.address])),
+    accounts: Object.fromEntries(Object.entries(ledger.keys).map(([name, k]) => [name, k.address])),
   }
 }
 

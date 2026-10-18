@@ -24,7 +24,7 @@ A key that fits nothing gets one calm line, "The spirits are quiet.", with no er
 
 - One page, one column on phones. From 960 px wide the three cards sit side by side and the picker is two columns (an id and Summon on the left, the prepared demos on the right).
 - At 1280x800 the hero and picker fill the first screen and the cards begin at its foot, so after a call the page scrolls the Stranger card to the top if it is more than half-way down the screen. In one column it always does. On an error it scrolls the message into view. The smoke test caught the first version hiding its own result below the fold.
-- The Medium card is sticky from 960 px wide and 700 px tall, so its answer stays in view while you read the Stranger's long list of notes.
+- No card is sticky. Stage 1 pinned the Medium card, but once the Auditor card and the audit-proof blocks made the cards taller than a 1280x800 screen, the pinned card was cut off at the bottom and could not be scrolled to. Measured at 1280x800: the cards are 2425, 965 and 991 px tall.
 - Sealed notes are `<details>`: open by default only from 960 px wide. On a 390x800 phone the Stranger card is 1361 px tall with the notes shut and 2954 px with every note and ciphertext open.
 - 44 px tap targets, no horizontal scroll, long hex wraps inside its box. Text fields scroll their own content, so a 64-character id in a narrow field is not treated as clipped.
 

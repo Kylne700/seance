@@ -4,6 +4,7 @@
 export class ParseError extends Error {}
 
 export interface StealthOutput {
+  resource: string // the token this note is of (a resource address), so an amount can be shown in its own unit
   statement: number // which StealthTransfer instruction of the transaction
   index: number // position inside that statement
   commitment: string // hex, 32 bytes: a Pedersen commitment, hides the amount
@@ -11,7 +12,7 @@ export interface StealthOutput {
   ciphertext: string // hex: amount and memo, encrypted to the recipient's view key
   ciphertextBytes: number // the length leaks whether a memo exists
   minimumValuePromise: number
-  hasViewableBalanceProof: boolean // true only when the resource has an auditor view key
+  viewableBalanceProof: string | null // JSON of the proof the auditor's key can open: present only when the resource has an auditor view key. Public bytes, like the rest
   spendCondition: string // "Key" (one public key may spend) or another variant name
   lockKey: string | null // the public key that may spend the note, when the rule is "Key": named in the open
 }
@@ -87,9 +88,10 @@ export function parseTransaction(reply: unknown): TxView {
       const ref = obj(s.resource_address_ref, 'resource_address_ref')
       const ro = outs.revealed_output ? obj(outs.revealed_output, 'revealed_output') : null
       const n = statements.length
+      const resource = str(ref.Address) ?? '(workspace reference)'
       statements.push({
         where,
-        resource: str(ref.Address) ?? '(workspace reference)',
+        resource,
         inputCommitments: arr(ins.inputs, 'inputs').map((x) => hex(obj(x, 'input').commitment, 'input commitment')),
         revealedIn: String(ins.revealed_amount ?? '0'),
         revealedOut: ro ? { amount: String(ro.amount), receiver: hex(ro.receiver, 'revealed receiver') } : null,
@@ -99,6 +101,7 @@ export function parseTransaction(reply: unknown): TxView {
           const ciphertext = hex(o.encrypted_data, 'encrypted_data')
           const auth = w.auth && typeof w.auth === 'object' ? (w.auth as Record<string, unknown>) : null
           return {
+            resource,
             statement: n,
             index,
             commitment: hex(o.commitment, 'commitment'),
@@ -106,7 +109,7 @@ export function parseTransaction(reply: unknown): TxView {
             ciphertext,
             ciphertextBytes: ciphertext.length / 2,
             minimumValuePromise: num(o.minimum_value_promise) ?? 0,
-            hasViewableBalanceProof: o.viewable_balance_proof != null,
+            viewableBalanceProof: o.viewable_balance_proof != null ? JSON.stringify(o.viewable_balance_proof) : null,
             spendCondition: auth ? (Object.keys(auth)[0] ?? '?') : '?',
             lockKey: typeof auth?.Key === 'string' && HEX.test(auth.Key) ? auth.Key : null,
           }

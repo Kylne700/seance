@@ -8,3 +8,4 @@ dist-gate/
 .walletd/
 .l1/
 tmp/
+template/target/

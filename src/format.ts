@@ -1,10 +1,32 @@
-// 1 tTARI = 1,000,000 uT (micro). Amounts come off the chain as integers.
-export function tari(uT: bigint | number | string): string {
-  const v = BigInt(uT)
-  const whole = v / 1_000_000n
-  const frac = (v % 1_000_000n).toString().padStart(6, '0').replace(/0+$/, '')
-  return `${whole}${frac ? '.' + frac : ''} tTARI`
+import { SEANCE_RESOURCE } from './config.ts'
+
+// Amounts come off the chain as integers of a token's smallest unit. 1 tTARI = 1,000,000 uT (micro); the demo token SEANCE has 8 decimals.
+export interface Token {
+  symbol: string
+  decimals: number
 }
+
+/** "0.031 tTARI": the whole part, then the decimals with trailing zeros dropped. No rounding. */
+export function units(value: bigint | number | string, token: Token): string {
+  const v = BigInt(value)
+  const base = 10n ** BigInt(token.decimals)
+  const frac = (v % base).toString().padStart(token.decimals, '0').replace(/0+$/, '')
+  return `${v / base}${frac ? '.' + frac : ''} ${token.symbol}`
+}
+
+export const TARI: Token = { symbol: 'tTARI', decimals: 6 }
+export const tari = (uT: bigint | number | string): string => units(uT, TARI)
+
+const TOKENS: Record<string, Token> = { ['resource_' + '01'.repeat(32)]: TARI, [SEANCE_RESOURCE]: { symbol: 'SEANCE', decimals: 8 } }
+
+/** An amount in the unit of the token it is of. A token this page does not know is shown as a plain count, never as tTARI. */
+export const amountOf = (resource: string, value: bigint | number | string): string => {
+  const token = TOKENS[resource]
+  return token ? units(value, token) : `${baseUnits(value)} base units`
+}
+
+/** "31,415": the raw count of smallest units, which is what the auditor actually searches. */
+export const baseUnits = (v: bigint | number | string): string => BigInt(v).toLocaleString('en-US')
 
 /** First and last characters of a long hex string, for tight places. */
 export const short = (h: string, n = 8): string => (h.length <= 2 * n + 1 ? h : `${h.slice(0, n)}…${h.slice(-n)}`)

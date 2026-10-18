@@ -1,9 +1,9 @@
 // What a stranger can still read from one transaction with no key at all. Pure, and shared by the page and the tests: every value
 // is read from the parsed transaction, nothing is looked up or guessed. A caption says what the field shows; none claims a fix.
 import type { StealthStatement, TxView } from './chain.ts'
-import { plural, short, tari, when } from './format.ts'
+import { amountOf, plural, short, tari, when } from './format.ts'
 
-export type LeakId = 'token' | 'spent' | 'created' | 'revealed' | 'rule' | 'times' | 'epochs' | 'fee' | 'length'
+export type LeakId = 'token' | 'audit' | 'spent' | 'created' | 'revealed' | 'rule' | 'times' | 'epochs' | 'fee' | 'length'
 
 export interface Leak {
   id: LeakId
@@ -29,6 +29,7 @@ function epochWindow(v: TxView): string[] {
 export function leaks(v: TxView): Leak[] {
   const many = v.statements.length > 1
   const tag = (n: number): string => (many ? `Private transfer ${n + 1}: ` : '')
+  const proven = (s: StealthStatement): number => s.outputs.filter((o) => o.viewableBalanceProof != null).length
   const rules = new Map<string, number>()
   for (const o of v.outputs) rules.set(o.spendCondition, (rules.get(o.spendCondition) ?? 0) + 1)
   return [
@@ -38,6 +39,15 @@ export function leaks(v: TxView): Leak[] {
       mono: true,
       values: [...new Set(v.statements.map((s) => s.resource))],
       caption: 'Which token moved is public, even when the amount is sealed.',
+    },
+    {
+      id: 'audit',
+      term: 'Audit proofs',
+      mono: false,
+      values: v.statements.flatMap((s, n) => (proven(s) ? [`${tag(n)}${proven(s)} of ${plural(s.outputs.length, 'sealed note')} ${s.outputs.length === 1 ? 'carries' : 'carry'} an audit proof`] : [])),
+      caption: v.statements.some(proven)
+        ? "Whoever holds the token's audit key can read the amount of each note that carries a proof. That key cannot spend a note or read its memo."
+        : 'None here. A token can be made with an audit key, and then each of its notes carries a proof that only that key opens.',
     },
     {
       id: 'spent',
@@ -58,8 +68,8 @@ export function leaks(v: TxView): Leak[] {
       term: 'Amounts in the open',
       mono: false,
       values: v.statements.flatMap((s, n) => [
-        ...(s.revealedIn !== '0' ? [`${tag(n)}Taken from a public balance: ${tari(s.revealedIn)}`] : []),
-        ...(s.revealedOut ? [`${tag(n)}Paid out in the open: ${tari(s.revealedOut.amount)}${paysFee(s, v.feePaid) ? ', the network fee' : ''} (key ${short(s.revealedOut.receiver, 6)})`] : []),
+        ...(s.revealedIn !== '0' ? [`${tag(n)}Taken from a public balance: ${amountOf(s.resource, s.revealedIn)}`] : []),
+        ...(s.revealedOut ? [`${tag(n)}Paid out in the open: ${amountOf(s.resource, s.revealedOut.amount)}${paysFee(s, v.feePaid) ? ', the network fee' : ''} (key ${short(s.revealedOut.receiver, 6)})`] : []),
       ]),
       caption: 'Anything moved in or out of a public balance is readable by everyone, unlike the sealed notes.',
     },

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Seance: three ghosts read one private Tari payment</title>
-    <meta name="description" content="Pick a real Tari Ootle stealth transaction and watch three viewers read the same bytes: a stranger sees sealed envelopes, a medium with the view key reads the amount and memo, and the wrong key hears nothing." />
+    <meta name="description" content="Pick a real Tari Ootle stealth transaction and watch three viewers read the same bytes: a stranger sees sealed envelopes, a medium with the recipient&rsquo;s view key reads the amount and memo, an auditor with the token&rsquo;s audit key reads the amount only, and a wrong key hears nothing." />
     <meta name="color-scheme" content="dark" />
     <meta name="theme-color" content="#0d0b13" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
@@ -98,7 +98,7 @@
             </div>
           </article>
 
-          <article class="lens auditor soon" aria-labelledby="auditor-h">
+          <article class="lens auditor" aria-labelledby="auditor-h">
             <header class="lens-head">
               <svg class="spirit" viewBox="0 0 64 72" aria-hidden="true" focusable="false">
                 <path class="body" d="M10 66V30a22 22 0 0 1 44 0v36l-7-6-7 6-7-6-7 6-7-6z" />
@@ -108,11 +108,15 @@
               </svg>
               <div>
                 <h3 id="auditor-h">The Auditor</h3>
-                <p class="role"><span class="badge soon">Coming next</span></p>
+                <p class="role">Holds a token's audit key. Counts the amounts. Cannot spend, cannot read a memo.</p>
               </div>
             </header>
             <div class="lens-body">
-              <p>A third ghost with a narrower key, one that belongs to the token and not to a person. The plan: it sees how much moved, but not what the note says. It is not built yet, so this page does not pretend.</p>
+              <fieldset class="keys" id="audit-keys" aria-describedby="audit-note">
+                <legend>Whose key does the auditor hold?</legend>
+              </fieldset>
+              <p class="hint" id="audit-note">An audit key belongs to the token, not to a person. The token's maker names it once, and from then on every note of the token carries a proof that only that key opens. The demo key is public on purpose, for testnet only.</p>
+              <div class="reading-box" id="audit-reading" role="status" aria-live="polite"></div>
             </div>
           </article>
         </div>
@@ -134,7 +138,7 @@
 
     <footer class="foot">
       <div class="wrap">
-        <p><strong>Testnet only.</strong> Every transaction here lives on Tari's Esmeralda test network. The demo view keys are public on purpose and unlock nothing else. Never reuse them.</p>
+        <p><strong>Testnet only.</strong> Every transaction here lives on Tari's Esmeralda test network. The demo view keys, the audit key included, are public on purpose and unlock nothing else. Never reuse them.</p>
         <ul class="links">
           <li><a href="https://explorer.tari.mw" target="_blank" rel="noopener noreferrer">Tari Ootle explorer<span class="sr-only"> (opens in a new tab)</span></a></li>
           <li><a href="https://ootle.tari.com" target="_blank" rel="noopener noreferrer">Tari Ootle docs<span class="sr-only"> (opens in a new tab)</span></a></li>

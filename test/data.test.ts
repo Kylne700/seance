@@ -64,8 +64,10 @@ describe('recorded mode (the switch is on, or the network is blocked)', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  it('the demo list matches the ledger, in order', () => {
-    expect(demos.map((d) => d.id)).toEqual(txs.map((t) => t.id))
+  it('the demo list matches the ledger, in order: the audit-key demos first, then the TARI ones, numbered from 1', () => {
+    expect(demos.map((d) => d.id)).toEqual([...(ledger.hero as { id: string }[]), ...txs].map((t) => t.id))
+    expect(demos.map((d) => d.n)).toEqual(demos.map((_, i) => i + 1))
+    expect(demos.filter((d) => d.kind === 'audited').length).toBe(ledger.hero.length)
   })
 
   it('knows the recent sample too, but says "not recorded" for any other id, with no request', async () => {
