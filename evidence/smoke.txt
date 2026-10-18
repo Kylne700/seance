@@ -1,0 +1,310 @@
+Seance smoke test of dist/ at http://127.0.0.1:4273/seance/, 2026-10-18T17:46:07.221Z, Chrome/154.0.8037.92
+
+== the built files
+ok   build: asset paths are relative (works under /seance/)  [./favicon.svg ./assets/index-AreuVoYB.js ./assets/index-Bo0WmZhR.css #picker]
+ok   build: no inline script or style in index.html
+ok   build: no gate page shipped; third-party licence notices and favicon are
+ok   build: every host named in the built files is expected (ootle-indexer-a.tari.com, explorer.tari.mw, www.w3.org, ootle.tari.com); the w3.org one is the SVG namespace in the favicon
+
+== the block works (control for the recorded runs)
+ok   the offline browser cannot reach the explorer (so a page that works there needs no outside host)  [net::ERR_NAME_NOT_RESOLVED]
+
+== palette contrast
+ok   contrast: all 24 text/background pairs in the palette reach 4.5:1  [lowest 6.53:1]
+ok   contrast: focus ring and the borders of fields, selects, buttons and key choices reach 3:1  [--control #7a6fa6]
+
+== judge path, live indexer
+ok   live 1280px: loading the page asks nobody but its own server (all paths under /seance/)  [3 requests]
+ok   live 1280px: first view is the empty seance in live mode
+ok   live 1280px: 11 demos, 3 demo keys, the Auditor is labelled "Coming next"
+ok   live 1280px landing: no horizontal scroll  [1280 <= 1280]
+ok   live 1280px landing: nothing sticks out of the viewport
+ok   live 1280px landing: no clipped text
+ok   live 1280px landing: all 13 tap targets are at least 44x44 px
+ok   live 1280px landing: the three lens cards are side by side  [72,763 w363 | 459,763 w363 | 845,763 w363]
+ok   axe live 1280px landing: 0 violations  [43 rules passed; needs-review: color-contrast x11]
+ok   live 1280px: "Summon" shows a transaction id (c3a126b2c9...), in the id field and the address
+ok   live 1280px: the Stranger says where the data came from  [Live: read from the indexer just now.]
+ok   live 1280px: the 10 s step took 531 ms
+ok   live 1280px: the explorer link points at this very id and opens safely
+ok   live 1280px: sealed notes are open by default (2)
+ok   live 1280px: with no key chosen the Medium waits ("Hand the medium a key and it will listen.")
+ok   live 1280px: the answer is on screen without scrolling by hand: the Stranger card starts in the upper half  [top 16px of 800px, scrollY 747]
+ok   live 1280px: a pasted id shows that transaction, with its explorer link
+ok   live 1280px: "Hold the seance" shows demo 1, picks Bob's key, links to the explorer
+ok   live 1280px: Bob's key on demo 1: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   live 1280px: the Stranger's card shows neither the memo nor the amount
+ok   live 1280px: the Medium says it listened locally
+ok   live 1280px: after "Hold the seance" the answer is on screen without scrolling by hand  [top 362px of 800px]
+ok   live 1280px: eve's key on demo 1: silence ("The spirits are quiet."), no amount shown
+ok   live 1280px: carol's key on demo 1: silence ("The spirits are quiet."), no amount shown
+ok   live 1280px: bob's key on demo 1: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   live 1280px: pasting Bob's secret into the own-key field: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   live 1280px: a pasted key unchecks the demo keys and is called "your key"
+ok   live 1280px: a random pasted key: silence ("The spirits are quiet."), no amount shown
+ok   live 1280px: a malformed key gets a hint and no reading  [A view secret is 64 hexadecimal characters (0-9 and a-f). You have typed 9.]
+ok   live 1280px: clearing the field clears the hint
+ok   live 1280px: no request carried the pasted keys (6 requests checked: URL, headers, body)
+ok   live 1280px: the pasted key is not in the address, storage, cookies, history or page text
+ok   live 1280px: the revealed-amount demo says so
+ok   live 1280px: Bob's key on demo 11 (amount revealed): silence ("The spirits are quiet."), no amount shown
+ok   live 1280px: demo 7 shows its id and picks bob's key
+ok   live 1280px: demo 7 read by bob: reads 0.1 tTARI No memo  [[{"amount":"0.1 tTARI","memo":"No memo"}]]
+ok   live 1280px: a malformed id is refused without a request
+ok   live 1280px: the page brings the error message into view
+ok   live 1280px: 0 console errors or warnings, 0 page errors over the whole walk
+ok   live 1280px: the only outside host contacted is the indexer  [ootle-indexer-a.tari.com]
+ok   live 1280px loaded: no horizontal scroll  [1280 <= 1280]
+ok   live 1280px loaded: nothing sticks out of the viewport
+ok   live 1280px loaded: no clipped text
+ok   live 1280px loaded: all 18 tap targets are at least 44x44 px
+ok   live 1280px loaded: the three lens cards are side by side  [72,763 w363 | 459,763 w363 | 845,763 w363]
+ok   axe live 1280px loaded (Bob reads demo 1): 0 violations  [46 rules passed; needs-review: color-contrast x11]
+ok   live 1280px: all 16 Tab stops show the yellow 3 px outline and are on screen
+ok   live 1280px: Tab order follows the page: skip link, id field, buttons, mode switch, explorer link, keys, own key, footer  [a "Skip=0 input#txid=1 button#look=2 button#summon=3 select#demo=4 button#hold=5 button#mode-switch=6 a "Open in the explorer=7 input[key==12 input#own-key=13 a "Tari Ootle explorer=14 a "Tari Ootle docs=15]
+ok   live 1280px: an unknown id gives "not found" from the real indexer and the page stays live  [Live: The indexer does not know this transaction id on Esmeralda.]
+ok   live 1280px: the only console line it caused is the browser's own note about the indexer's 404  [Failed to load resource: the server responded with a status of 404 ()]
+ok   live 1280px: after "not found" the next lookup still works, live
+ok   live 390px: loading the page asks nobody but its own server (all paths under /seance/)  [3 requests]
+ok   live 390px: first view is the empty seance in live mode
+ok   live 390px: 11 demos, 3 demo keys, the Auditor is labelled "Coming next"
+ok   live 390px landing: no horizontal scroll  [390 <= 390]
+ok   live 390px landing: nothing sticks out of the viewport
+ok   live 390px landing: no clipped text
+ok   live 390px landing: all 13 tap targets are at least 44x44 px
+ok   live 390px landing: the three lens cards are stacked  [16,1089 w358 | 16,1312 w358 | 16,1967 w358]
+ok   axe live 390px landing: 0 violations  [43 rules passed; needs-review: color-contrast x11]
+ok   live 390px: "Summon" shows a transaction id (c85787bc3d...), in the id field and the address
+ok   live 390px: the Stranger says where the data came from  [Live: read from the indexer just now.]
+ok   live 390px: the 10 s step took 131 ms
+ok   live 390px: the explorer link points at this very id and opens safely
+ok   live 390px: sealed notes are closed by default (2)
+ok   live 390px: with no key chosen the Medium waits ("Hand the medium a key and it will listen.")
+ok   live 390px: the answer is on screen without scrolling by hand: the Stranger card was scrolled to the top  [top 16px of 800px, scrollY 1098]
+ok   live 390px: a pasted id shows that transaction, with its explorer link
+ok   live 390px: "Hold the seance" shows demo 1, picks Bob's key, links to the explorer
+ok   live 390px: Bob's key on demo 1: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   live 390px: the Stranger's card shows neither the memo nor the amount
+ok   live 390px: the Medium says it listened locally
+ok   live 390px: after "Hold the seance" the answer is on screen without scrolling by hand  [top 16px of 800px]
+ok   live 390px: eve's key on demo 1: silence ("The spirits are quiet."), no amount shown
+ok   live 390px: carol's key on demo 1: silence ("The spirits are quiet."), no amount shown
+ok   live 390px: bob's key on demo 1: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   live 390px: pasting Bob's secret into the own-key field: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   live 390px: a pasted key unchecks the demo keys and is called "your key"
+ok   live 390px: a random pasted key: silence ("The spirits are quiet."), no amount shown
+ok   live 390px: a malformed key gets a hint and no reading  [A view secret is 64 hexadecimal characters (0-9 and a-f). You have typed 9.]
+ok   live 390px: clearing the field clears the hint
+ok   live 390px: no request carried the pasted keys (6 requests checked: URL, headers, body)
+ok   live 390px: the pasted key is not in the address, storage, cookies, history or page text
+ok   live 390px: the revealed-amount demo says so
+ok   live 390px: Bob's key on demo 11 (amount revealed): silence ("The spirits are quiet."), no amount shown
+ok   live 390px: a malformed id is refused without a request
+ok   live 390px: the page brings the error message into view
+ok   live 390px: 0 console errors or warnings, 0 page errors over the whole walk
+ok   live 390px: the only outside host contacted is the indexer  [ootle-indexer-a.tari.com]
+ok   live 390px loaded: no horizontal scroll  [390 <= 390]
+ok   live 390px loaded: nothing sticks out of the viewport
+ok   live 390px loaded: no clipped text
+ok   live 390px loaded: all 18 tap targets are at least 44x44 px
+ok   live 390px loaded: the three lens cards are stacked  [16,1114 w358 | 16,2476 w358 | 16,3262 w358]
+ok   axe live 390px loaded (Bob reads demo 1): 0 violations  [46 rules passed; needs-review: color-contrast x11]
+ok   live 390px with every note and ciphertext opened: no horizontal scroll  [390 <= 390]
+ok   live 390px with every note and ciphertext opened: nothing sticks out of the viewport
+ok   live 390px with every note and ciphertext opened: no clipped text
+ok   live 390px with every note and ciphertext opened: all 18 tap targets are at least 44x44 px
+ok   live 390px with every note and ciphertext opened: the three lens cards are stacked  [16,1114 w358 | 16,4070 w358 | 16,4856 w358]
+ok   axe live 390px with every note and ciphertext opened: 0 violations  [46 rules passed; needs-review: color-contrast x11]
+ok   live 390px: all 16 Tab stops show the yellow 3 px outline and are on screen
+ok   live 390px: Tab order follows the page: skip link, id field, buttons, mode switch, explorer link, keys, own key, footer  [a "Skip=0 input#txid=1 button#look=2 button#summon=3 select#demo=4 button#hold=5 button#mode-switch=6 a "Open in the explorer=7 input[key==12 input#own-key=13 a "Tari Ootle explorer=14 a "Tari Ootle docs=15]
+ok   live 390px: an unknown id gives "not found" from the real indexer and the page stays live  [Live: The indexer does not know this transaction id on Esmeralda.]
+ok   live 390px: the only console line it caused is the browser's own note about the indexer's 404  [Failed to load resource: the server responded with a status of 404 ()]
+ok   live 390px: after "not found" the next lookup still works, live
+
+== judge path, recorded (fixture) mode, no network
+ok   recorded 1280px: loading the page asks nobody but its own server (all paths under /seance/)  [3 requests]
+ok   recorded 1280px: first view is the empty seance in live mode
+ok   recorded 1280px: 11 demos, 3 demo keys, the Auditor is labelled "Coming next"
+ok   recorded 1280px landing: no horizontal scroll  [1280 <= 1280]
+ok   recorded 1280px landing: nothing sticks out of the viewport
+ok   recorded 1280px landing: no clipped text
+ok   recorded 1280px landing: all 13 tap targets are at least 44x44 px
+ok   recorded 1280px landing: the three lens cards are side by side  [72,763 w363 | 459,763 w363 | 845,763 w363]
+ok   axe recorded 1280px landing: 0 violations  [43 rules passed; needs-review: color-contrast x11]
+ok   recorded 1280px: the manual switch turns recorded mode on and says so
+ok   axe recorded 1280px landing after the switch: 0 violations  [43 rules passed; needs-review: color-contrast x11]
+ok   recorded 1280px: "Summon" shows a transaction id (1a3823bdbb...), in the id field and the address
+ok   recorded 1280px: the Stranger says where the data came from  [Recorded: a saved copy of the indexer's answer.]
+ok   recorded 1280px: the 10 s step took 46 ms
+ok   recorded 1280px: the explorer link points at this very id and opens safely
+ok   recorded 1280px: sealed notes are open by default (2)
+ok   recorded 1280px: with no key chosen the Medium waits ("Hand the medium a key and it will listen.")
+ok   recorded 1280px: the answer is on screen without scrolling by hand: the Stranger card starts in the upper half  [top 16px of 800px, scrollY 747]
+ok   recorded 1280px: a pasted id shows that transaction, with its explorer link
+ok   recorded 1280px: "Hold the seance" shows demo 1, picks Bob's key, links to the explorer
+ok   recorded 1280px: Bob's key on demo 1: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   recorded 1280px: the Stranger's card shows neither the memo nor the amount
+ok   recorded 1280px: the Medium says it listened locally
+ok   recorded 1280px: after "Hold the seance" the answer is on screen without scrolling by hand  [top 362px of 800px]
+ok   recorded 1280px: the Stranger's card for demo 1 is word for word the same as in the live run
+ok   recorded 1280px: eve's key on demo 1: silence ("The spirits are quiet."), no amount shown
+ok   recorded 1280px: carol's key on demo 1: silence ("The spirits are quiet."), no amount shown
+ok   recorded 1280px: bob's key on demo 1: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   recorded 1280px: pasting Bob's secret into the own-key field: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   recorded 1280px: a pasted key unchecks the demo keys and is called "your key"
+ok   recorded 1280px: a random pasted key: silence ("The spirits are quiet."), no amount shown
+ok   recorded 1280px: a malformed key gets a hint and no reading  [A view secret is 64 hexadecimal characters (0-9 and a-f). You have typed 9.]
+ok   recorded 1280px: clearing the field clears the hint
+ok   recorded 1280px: no request carried the pasted keys (4 requests checked: URL, headers, body)
+ok   recorded 1280px: the pasted key is not in the address, storage, cookies, history or page text
+ok   recorded 1280px: the revealed-amount demo says so
+ok   recorded 1280px: Bob's key on demo 11 (amount revealed): silence ("The spirits are quiet."), no amount shown
+ok   recorded 1280px: demo 2 shows its id and picks carol's key
+ok   recorded 1280px: demo 2 read by carol: reads 1.31 tTARI “Meet at the old well. Midnight.”  [[{"amount":"1.31 tTARI","memo":"“Meet at the old well. Midnight.”"}]]
+ok   recorded 1280px: demo 3 shows its id and picks bob's key
+ok   recorded 1280px: demo 3 read by bob: reads 0.031 tTARI “Trick or treat”  [[{"amount":"0.031 tTARI","memo":"“Trick or treat”"}]]
+ok   recorded 1280px: demo 4 shows its id and picks carol's key
+ok   recorded 1280px: demo 4 read by carol: reads 0.5 tTARI “Boo!”  [[{"amount":"0.5 tTARI","memo":"“Boo!”"}]]
+ok   recorded 1280px: demo 5 shows its id and picks bob's key
+ok   recorded 1280px: demo 5 read by bob: reads 2 tTARI “Seven candles, one wish.”  [[{"amount":"2 tTARI","memo":"“Seven candles, one wish.”"}]]
+ok   recorded 1280px: demo 6 shows its id and picks carol's key
+ok   recorded 1280px: demo 6 read by carol: reads 0.013 tTARI “Mind the third stair.”  [[{"amount":"0.013 tTARI","memo":"“Mind the third stair.”"}]]
+ok   recorded 1280px: demo 7 shows its id and picks bob's key
+ok   recorded 1280px: demo 7 read by bob: reads 0.1 tTARI No memo  [[{"amount":"0.1 tTARI","memo":"No memo"}]]
+ok   recorded 1280px: demo 8 shows its id and picks carol's key
+ok   recorded 1280px: demo 8 read by carol: reads 0.99 tTARI “Pumpkin pie fund.”  [[{"amount":"0.99 tTARI","memo":"“Pumpkin pie fund.”"}]]
+ok   recorded 1280px: demo 9 shows its id and picks bob's key
+ok   recorded 1280px: demo 9 read by bob: reads 0.404 tTARI “Page not found. Neither is the ghost.”  [[{"amount":"0.404 tTARI","memo":"“Page not found. Neither is the ghost.”"}]]
+ok   recorded 1280px: demo 10 shows its id and picks carol's key
+ok   recorded 1280px: demo 10 read by carol: reads 0.7 tTARI “Garlic, salt, and a very long walk home.”  [[{"amount":"0.7 tTARI","memo":"“Garlic, salt, and a very long walk home.”"}]]
+ok   recorded 1280px: the page stayed in recorded mode throughout
+ok   recorded 1280px: an unknown id says "recorded mode only knows the demos" and stays recorded
+ok   recorded 1280px: a malformed id is refused without a request
+ok   recorded 1280px: the page brings the error message into view
+ok   recorded 1280px: 0 console errors or warnings, 0 page errors over the whole walk
+ok   recorded 1280px: no outside request was even attempted, none failed  [ ]
+ok   recorded 1280px loaded: no horizontal scroll  [1280 <= 1280]
+ok   recorded 1280px loaded: nothing sticks out of the viewport
+ok   recorded 1280px loaded: no clipped text
+ok   recorded 1280px loaded: all 18 tap targets are at least 44x44 px
+ok   recorded 1280px loaded: the three lens cards are side by side  [72,763 w363 | 459,763 w363 | 845,763 w363]
+ok   axe recorded 1280px loaded (Bob reads demo 1): 0 violations  [46 rules passed; needs-review: color-contrast x11]
+ok   recorded 1280px: all 16 Tab stops show the yellow 3 px outline and are on screen
+ok   recorded 1280px: Tab order follows the page: skip link, id field, buttons, mode switch, explorer link, keys, own key, footer  [a "Skip=0 input#txid=1 button#look=2 button#summon=3 select#demo=4 button#hold=5 button#mode-switch=6 a "Open in the explorer=7 input[key==12 input#own-key=13 a "Tari Ootle explorer=14 a "Tari Ootle docs=15]
+ok   recorded 390px: loading the page asks nobody but its own server (all paths under /seance/)  [3 requests]
+ok   recorded 390px: first view is the empty seance in live mode
+ok   recorded 390px: 11 demos, 3 demo keys, the Auditor is labelled "Coming next"
+ok   recorded 390px landing: no horizontal scroll  [390 <= 390]
+ok   recorded 390px landing: nothing sticks out of the viewport
+ok   recorded 390px landing: no clipped text
+ok   recorded 390px landing: all 13 tap targets are at least 44x44 px
+ok   recorded 390px landing: the three lens cards are stacked  [16,1089 w358 | 16,1312 w358 | 16,1967 w358]
+ok   axe recorded 390px landing: 0 violations  [43 rules passed; needs-review: color-contrast x11]
+ok   recorded 390px: the manual switch turns recorded mode on and says so
+ok   axe recorded 390px landing after the switch: 0 violations  [43 rules passed; needs-review: color-contrast x11]
+ok   recorded 390px: "Summon" shows a transaction id (c85787bc3d...), in the id field and the address
+ok   recorded 390px: the Stranger says where the data came from  [Recorded: a saved copy of the indexer's answer.]
+ok   recorded 390px: the 10 s step took 25 ms
+ok   recorded 390px: the explorer link points at this very id and opens safely
+ok   recorded 390px: sealed notes are closed by default (2)
+ok   recorded 390px: with no key chosen the Medium waits ("Hand the medium a key and it will listen.")
+ok   recorded 390px: the answer is on screen without scrolling by hand: the Stranger card was scrolled to the top  [top 16px of 800px, scrollY 1137]
+ok   recorded 390px: a pasted id shows that transaction, with its explorer link
+ok   recorded 390px: "Hold the seance" shows demo 1, picks Bob's key, links to the explorer
+ok   recorded 390px: Bob's key on demo 1: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   recorded 390px: the Stranger's card shows neither the memo nor the amount
+ok   recorded 390px: the Medium says it listened locally
+ok   recorded 390px: after "Hold the seance" the answer is on screen without scrolling by hand  [top 16px of 800px]
+ok   recorded 390px: the Stranger's card for demo 1 is word for word the same as in the live run
+ok   recorded 390px: eve's key on demo 1: silence ("The spirits are quiet."), no amount shown
+ok   recorded 390px: carol's key on demo 1: silence ("The spirits are quiet."), no amount shown
+ok   recorded 390px: bob's key on demo 1: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   recorded 390px: pasting Bob's secret into the own-key field: reads 0.666 tTARI “The candle went out. Did you do that?”  [[{"amount":"0.666 tTARI","memo":"“The candle went out. Did you do that?”"}]]
+ok   recorded 390px: a pasted key unchecks the demo keys and is called "your key"
+ok   recorded 390px: a random pasted key: silence ("The spirits are quiet."), no amount shown
+ok   recorded 390px: a malformed key gets a hint and no reading  [A view secret is 64 hexadecimal characters (0-9 and a-f). You have typed 9.]
+ok   recorded 390px: clearing the field clears the hint
+ok   recorded 390px: no request carried the pasted keys (3 requests checked: URL, headers, body)
+ok   recorded 390px: the pasted key is not in the address, storage, cookies, history or page text
+ok   recorded 390px: the revealed-amount demo says so
+ok   recorded 390px: Bob's key on demo 11 (amount revealed): silence ("The spirits are quiet."), no amount shown
+ok   recorded 390px: demo 2 shows its id and picks carol's key
+ok   recorded 390px: demo 2 read by carol: reads 1.31 tTARI “Meet at the old well. Midnight.”  [[{"amount":"1.31 tTARI","memo":"“Meet at the old well. Midnight.”"}]]
+ok   recorded 390px: demo 3 shows its id and picks bob's key
+ok   recorded 390px: demo 3 read by bob: reads 0.031 tTARI “Trick or treat”  [[{"amount":"0.031 tTARI","memo":"“Trick or treat”"}]]
+ok   recorded 390px: demo 4 shows its id and picks carol's key
+ok   recorded 390px: demo 4 read by carol: reads 0.5 tTARI “Boo!”  [[{"amount":"0.5 tTARI","memo":"“Boo!”"}]]
+ok   recorded 390px: demo 5 shows its id and picks bob's key
+ok   recorded 390px: demo 5 read by bob: reads 2 tTARI “Seven candles, one wish.”  [[{"amount":"2 tTARI","memo":"“Seven candles, one wish.”"}]]
+ok   recorded 390px: demo 6 shows its id and picks carol's key
+ok   recorded 390px: demo 6 read by carol: reads 0.013 tTARI “Mind the third stair.”  [[{"amount":"0.013 tTARI","memo":"“Mind the third stair.”"}]]
+ok   recorded 390px: demo 7 shows its id and picks bob's key
+ok   recorded 390px: demo 7 read by bob: reads 0.1 tTARI No memo  [[{"amount":"0.1 tTARI","memo":"No memo"}]]
+ok   recorded 390px: demo 8 shows its id and picks carol's key
+ok   recorded 390px: demo 8 read by carol: reads 0.99 tTARI “Pumpkin pie fund.”  [[{"amount":"0.99 tTARI","memo":"“Pumpkin pie fund.”"}]]
+ok   recorded 390px: demo 9 shows its id and picks bob's key
+ok   recorded 390px: demo 9 read by bob: reads 0.404 tTARI “Page not found. Neither is the ghost.”  [[{"amount":"0.404 tTARI","memo":"“Page not found. Neither is the ghost.”"}]]
+ok   recorded 390px: demo 10 shows its id and picks carol's key
+ok   recorded 390px: demo 10 read by carol: reads 0.7 tTARI “Garlic, salt, and a very long walk home.”  [[{"amount":"0.7 tTARI","memo":"“Garlic, salt, and a very long walk home.”"}]]
+ok   recorded 390px: the page stayed in recorded mode throughout
+ok   recorded 390px: an unknown id says "recorded mode only knows the demos" and stays recorded
+ok   recorded 390px: a malformed id is refused without a request
+ok   recorded 390px: the page brings the error message into view
+ok   recorded 390px: 0 console errors or warnings, 0 page errors over the whole walk
+ok   recorded 390px: no outside request was even attempted, none failed  [ ]
+ok   recorded 390px loaded: no horizontal scroll  [390 <= 390]
+ok   recorded 390px loaded: nothing sticks out of the viewport
+ok   recorded 390px loaded: no clipped text
+ok   recorded 390px loaded: all 18 tap targets are at least 44x44 px
+ok   recorded 390px loaded: the three lens cards are stacked  [16,1153 w358 | 16,2538 w358 | 16,3323 w358]
+ok   axe recorded 390px loaded (Bob reads demo 1): 0 violations  [46 rules passed; needs-review: color-contrast x11]
+ok   recorded 390px with every note and ciphertext opened: no horizontal scroll  [390 <= 390]
+ok   recorded 390px with every note and ciphertext opened: nothing sticks out of the viewport
+ok   recorded 390px with every note and ciphertext opened: no clipped text
+ok   recorded 390px with every note and ciphertext opened: all 18 tap targets are at least 44x44 px
+ok   recorded 390px with every note and ciphertext opened: the three lens cards are stacked  [16,1153 w358 | 16,4131 w358 | 16,4917 w358]
+ok   axe recorded 390px with every note and ciphertext opened: 0 violations  [46 rules passed; needs-review: color-contrast x11]
+ok   recorded 390px: all 16 Tab stops show the yellow 3 px outline and are on screen
+ok   recorded 390px: Tab order follows the page: skip link, id field, buttons, mode switch, explorer link, keys, own key, footer  [a "Skip=0 input#txid=1 button#look=2 button#summon=3 select#demo=4 button#hold=5 button#mode-switch=6 a "Open in the explorer=7 input[key==12 input#own-key=13 a "Tari Ootle explorer=14 a "Tari Ootle docs=15]
+
+== the indexer goes away
+ok   auto-fallback 1280px: with the indexer unreachable the page switches to recorded by itself and says so  [The indexer did not answer, so the page switched to recorded data. Showing transaction 985ef2be…21989c2a (Commit).]
+ok   auto-fallback 1280px: the id from the address still shows, marked "Recorded"
+ok   auto-fallback 1280px: the indexer was asked once (the first try), then left alone  [1 requests]
+ok   auto-fallback 1280px: Carol's key reads demo 2 from the recording: reads 1.31 tTARI “Meet at the old well. Midnight.”  [[{"amount":"1.31 tTARI","memo":"“Meet at the old well. Midnight.”"}]]
+ok   auto-fallback 1280px: further lookups are answered from the recording without asking again  [1 requests]
+ok   auto-fallback 1280px: no console error except the browser's own note that the indexer request failed
+ok   auto-fallback 1280px: the way back to live is one click
+ok   auto-fallback 390px: with the indexer unreachable the page switches to recorded by itself and says so  [The indexer did not answer, so the page switched to recorded data. Showing transaction 985ef2be…21989c2a (Commit).]
+ok   auto-fallback 390px: the id from the address still shows, marked "Recorded"
+ok   auto-fallback 390px: the indexer was asked once (the first try), then left alone  [1 requests]
+ok   auto-fallback 390px: Carol's key reads demo 2 from the recording: reads 1.31 tTARI “Meet at the old well. Midnight.”  [[{"amount":"1.31 tTARI","memo":"“Meet at the old well. Midnight.”"}]]
+ok   auto-fallback 390px: further lookups are answered from the recording without asking again  [1 requests]
+ok   auto-fallback 390px: no console error except the browser's own note that the indexer request failed
+ok   auto-fallback 390px: the way back to live is one click
+ok   auto-fallback (indexer never answers): the page gives up and switches to recorded  [after 8087 ms, 1 request held]
+ok   auto-fallback (indexer never answers): the wait is about the 8 s timeout  [8087 ms]
+
+== keyboard, reduced motion, policy
+ok   keyboard 1280px: the first Tab lands on the skip link
+ok   keyboard 1280px: Enter on the skip link, then Tab, lands in the id field  [txid]
+ok   keyboard 1280px: five more Tabs reach the mode switch (look, summon, demo, hold, switch)  [mode-switch]
+ok   keyboard 1280px: Space on the mode switch turns recorded mode on
+ok   keyboard 1280px: Shift+Tab walks back to the id field  [txid]
+ok   keyboard 1280px: typing an id and pressing Enter shows it
+ok   keyboard 1280px: Tab, Tab, Tab reaches the demo list  [demo]
+ok   keyboard 1280px: the arrow key picks the next demo
+ok   keyboard 1280px: Enter on "Hold the seance" loads demo 2 and focus stays on the button  [hold]
+ok   keyboard 1280px: Carol's key on demo 2: reads 1.31 tTARI “Meet at the old well. Midnight.”  [[{"amount":"1.31 tTARI","memo":"“Meet at the old well. Midnight.”"}]]
+ok   keyboard 1280px: the arrow keys move through the keys (carol to eve)
+ok   keyboard 1280px: Eve's key on demo 2 by keyboard: silence ("The spirits are quiet."), no amount shown
+ok   keyboard 1280px: Space on "Summon" works in recorded mode and keeps focus
+ok   motion: by default the flame flickers and a reading fades in (control)  [flicker, rise]
+ok   motion: with prefers-reduced-motion the flame is still, readings do not fade in, scrolling is instant  [none, none, auto]
+ok   motion: reduced motion still scrolls to the answer on a phone  [top 16px, scrollY 1137]
+ok   csp: the policy is in the page; connect-src allows only the indexer; default is none  [default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self'; connect-src https://ootle-indexer-a.tari.com; base-uri 'none'; form-action 'none']
+ok   csp: no unsafe-inline, plain unsafe-eval, wildcard, data: or blob:
+ok   csp: negative controls are blocked by the browser: a fetch to another site, eval, an injected inline script  [blocked (TypeError); blocked (EvalError: Evaluating a string as JavaScript violates the fo); injected=false]
+ok   csp: the browser reported violations for each of them  [connect-src https://example.org/leak?k=secret | script-src-elem inline | img-src https://example.org/pixel.png]
+
+RESULT: PASS

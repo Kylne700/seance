@@ -25,23 +25,25 @@
     <main class="wrap" id="main">
       <section class="picker" id="picker" aria-labelledby="picker-h">
         <h2 id="picker-h">Call up a transaction</h2>
-        <form id="pick" autocomplete="off" novalidate>
-          <label for="txid">Transaction id</label>
-          <div class="row">
-            <input id="txid" name="txid" type="text" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="64 hexadecimal characters" aria-describedby="txid-hint" />
-            <button class="btn primary" type="submit" id="look">Look at it</button>
-          </div>
-          <p class="hint" id="txid-hint">Any transaction on the Esmeralda test network. Only this id is sent, and only to the indexer.</p>
-          <div class="row">
-            <button class="btn ghost" type="button" id="summon">Summon a recent transaction</button>
-          </div>
-        </form>
+        <div class="picker-cols">
+          <form id="pick" autocomplete="off" novalidate>
+            <label for="txid">Transaction id</label>
+            <div class="row">
+              <input id="txid" name="txid" type="text" spellcheck="false" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="64 hexadecimal characters" aria-describedby="txid-hint" />
+              <button class="btn primary" type="submit" id="look">Look at it</button>
+            </div>
+            <p class="hint" id="txid-hint">Any transaction on the Esmeralda test network. Only this id is sent, and only to the indexer.</p>
+            <div class="row">
+              <button class="btn ghost" type="button" id="summon">Summon a recent transaction</button>
+            </div>
+          </form>
 
-        <div class="demo">
-          <label for="demo">Or hold the seance on a prepared one</label>
-          <div class="row">
-            <select id="demo" name="demo"></select>
-            <button class="btn primary" type="button" id="hold">Hold the seance</button>
+          <div class="demo">
+            <label for="demo">Or hold the seance on a prepared one</label>
+            <div class="row">
+              <select id="demo" name="demo"></select>
+              <button class="btn primary" type="button" id="hold">Hold the seance</button>
+            </div>
           </div>
         </div>
 

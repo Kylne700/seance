@@ -88,9 +88,18 @@ function describe(s: Shown): string {
   return what
 }
 
-// In one column the cards sit below the fold, so after a call the page brings the answer (or the error) into view.
+// The cards sit below the picker, so after a call the page brings the answer (or the error) into view.
 function reveal(el: HTMLElement, block: ScrollLogicalPosition): void {
   el.scrollIntoView({ block, behavior: calm.matches ? 'auto' : 'smooth' })
+}
+const onScreen = (el: HTMLElement): boolean => {
+  const r = el.getBoundingClientRect()
+  return r.top >= 0 && r.bottom <= window.innerHeight
+}
+// One column: always bring the Stranger card to the top. Wide: only if the cards are not already in the upper half of the screen.
+const cardsFar = (): boolean => {
+  const top = strangerCard.getBoundingClientRect().top
+  return oneColumn.matches || top < 0 || top > window.innerHeight / 2
 }
 
 async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: boolean } = {}): Promise<void> {
@@ -111,7 +120,7 @@ async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: 
     }
     reflectMode()
     setStatus(describe(shown), shown.fellBack || shown.quietChain ? 'warn' : 'info')
-    if (opts.fromUser && oneColumn.matches) reveal(strangerCard, 'start')
+    if (opts.fromUser && cardsFar()) reveal(strangerCard, 'start')
     await hear()
   } catch (e) {
     if (mine !== loadSeq) return
@@ -123,7 +132,7 @@ async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: 
       console.error(e)
       setStatus('Something unexpected went wrong. Try again, or switch to recorded data.', 'error')
     }
-    if (opts.fromUser && oneColumn.matches) reveal(status, 'center')
+    if (opts.fromUser && !onScreen(status)) reveal(status, 'center')
     await hear()
   } finally {
     if (mine === loadSeq) setBusy(false)
