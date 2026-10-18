@@ -1,4 +1,4 @@
-Seance smoke test of dist/ at http://127.0.0.1:4273/seance/, 2026-10-18T17:46:07.221Z, Chrome/154.0.8037.92
+Seance smoke test of dist/ at http://127.0.0.1:4273/seance/, 2026-10-18T17:51:48.912Z, Chrome/154.0.8037.92
 
 == the built files
 ok   build: asset paths are relative (works under /seance/)  [./favicon.svg ./assets/index-AreuVoYB.js ./assets/index-Bo0WmZhR.css #picker]
@@ -10,7 +10,7 @@ ok   build: every host named in the built files is expected (ootle-indexer-a.tar
 ok   the offline browser cannot reach the explorer (so a page that works there needs no outside host)  [net::ERR_NAME_NOT_RESOLVED]
 
 == palette contrast
-ok   contrast: all 24 text/background pairs in the palette reach 4.5:1  [lowest 6.53:1]
+ok   contrast: all 27 text/background pairs in the palette reach 4.5:1  [lowest 6.53:1]
 ok   contrast: focus ring and the borders of fields, selects, buttons and key choices reach 3:1  [--control #7a6fa6]
 
 == judge path, live indexer
@@ -25,7 +25,7 @@ ok   live 1280px landing: the three lens cards are side by side  [72,763 w363 | 
 ok   axe live 1280px landing: 0 violations  [43 rules passed; needs-review: color-contrast x11]
 ok   live 1280px: "Summon" shows a transaction id (c3a126b2c9...), in the id field and the address
 ok   live 1280px: the Stranger says where the data came from  [Live: read from the indexer just now.]
-ok   live 1280px: the 10 s step took 531 ms
+ok   live 1280px: the 10 s step took 448 ms
 ok   live 1280px: the explorer link points at this very id and opens safely
 ok   live 1280px: sealed notes are open by default (2)
 ok   live 1280px: with no key chosen the Medium waits ("Hand the medium a key and it will listen.")
@@ -74,9 +74,9 @@ ok   live 390px landing: no clipped text
 ok   live 390px landing: all 13 tap targets are at least 44x44 px
 ok   live 390px landing: the three lens cards are stacked  [16,1089 w358 | 16,1312 w358 | 16,1967 w358]
 ok   axe live 390px landing: 0 violations  [43 rules passed; needs-review: color-contrast x11]
-ok   live 390px: "Summon" shows a transaction id (c85787bc3d...), in the id field and the address
+ok   live 390px: "Summon" shows a transaction id (985ef2beb3...), in the id field and the address
 ok   live 390px: the Stranger says where the data came from  [Live: read from the indexer just now.]
-ok   live 390px: the 10 s step took 131 ms
+ok   live 390px: the 10 s step took 125 ms
 ok   live 390px: the explorer link points at this very id and opens safely
 ok   live 390px: sealed notes are closed by default (2)
 ok   live 390px: with no key chosen the Medium waits ("Hand the medium a key and it will listen.")
@@ -122,7 +122,7 @@ ok   live 390px: the only console line it caused is the browser's own note about
 ok   live 390px: after "not found" the next lookup still works, live
 
 == judge path, recorded (fixture) mode, no network
-ok   recorded 1280px: loading the page asks nobody but its own server (all paths under /seance/)  [3 requests]
+ok   recorded 1280px: loading the page asks nobody but its own server (all paths under /seance/)  [4 requests]
 ok   recorded 1280px: first view is the empty seance in live mode
 ok   recorded 1280px: 11 demos, 3 demo keys, the Auditor is labelled "Coming next"
 ok   recorded 1280px landing: no horizontal scroll  [1280 <= 1280]
@@ -135,7 +135,7 @@ ok   recorded 1280px: the manual switch turns recorded mode on and says so
 ok   axe recorded 1280px landing after the switch: 0 violations  [43 rules passed; needs-review: color-contrast x11]
 ok   recorded 1280px: "Summon" shows a transaction id (1a3823bdbb...), in the id field and the address
 ok   recorded 1280px: the Stranger says where the data came from  [Recorded: a saved copy of the indexer's answer.]
-ok   recorded 1280px: the 10 s step took 46 ms
+ok   recorded 1280px: the 10 s step took 49 ms
 ok   recorded 1280px: the explorer link points at this very id and opens safely
 ok   recorded 1280px: sealed notes are open by default (2)
 ok   recorded 1280px: with no key chosen the Medium waits ("Hand the medium a key and it will listen.")
@@ -202,9 +202,9 @@ ok   recorded 390px landing: the three lens cards are stacked  [16,1089 w358 | 1
 ok   axe recorded 390px landing: 0 violations  [43 rules passed; needs-review: color-contrast x11]
 ok   recorded 390px: the manual switch turns recorded mode on and says so
 ok   axe recorded 390px landing after the switch: 0 violations  [43 rules passed; needs-review: color-contrast x11]
-ok   recorded 390px: "Summon" shows a transaction id (c85787bc3d...), in the id field and the address
+ok   recorded 390px: "Summon" shows a transaction id (1a3823bdbb...), in the id field and the address
 ok   recorded 390px: the Stranger says where the data came from  [Recorded: a saved copy of the indexer's answer.]
-ok   recorded 390px: the 10 s step took 25 ms
+ok   recorded 390px: the 10 s step took 19 ms
 ok   recorded 390px: the explorer link points at this very id and opens safely
 ok   recorded 390px: sealed notes are closed by default (2)
 ok   recorded 390px: with no key chosen the Medium waits ("Hand the medium a key and it will listen.")

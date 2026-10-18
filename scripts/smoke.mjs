@@ -575,6 +575,9 @@ const ratio = (a, b) => {
 async function paletteChecks(browser) {
   const { page } = await open(browser, { w: 1280 })
   const v = await page.evaluate(() => Object.fromEntries(['--bg', '--card', '--card-2', '--well', '--text', '--muted', '--violet', '--amber', '--amber-ink', '--mint', '--rose', '--focus', '--control', '--line'].map((n) => [n, getComputedStyle(document.documentElement).getPropertyValue(n).trim()])))
+  // axe cannot judge text that sits on the page's radial gradient ("needs review"), so bound it: the gradient is never lighter than its centre colour
+  const glow = await page.evaluate(() => getComputedStyle(document.body).backgroundImage.match(/rgb\((\d+), (\d+), (\d+)\)/)?.slice(1).map(Number))
+  const peak = glow ? `#${glow.map((n) => n.toString(16).padStart(2, '0')).join('')}` : '#ffffff'
   await page.close()
   const text = [
     ['--text', '--bg'], ['--text', '--card'], ['--text', '--card-2'], ['--text', '--well'],
@@ -583,6 +586,7 @@ async function paletteChecks(browser) {
     ['--amber', '--bg'], ['--amber', '--card'], ['--amber', '--card-2'], ['--amber-ink', '--amber'], ['--amber-ink', '#ffc477'],
     ['--rose', '--card'], ['--rose', '--bg'], ['--mint', '--card'], ['--mint', '#12332a'], ['--amber', '#3a2a10'], ['--violet', '#2a2250'],
     ['#9a92b4', '--well'], ['#e4defa', '--well'],
+    ['--text', peak], ['--muted', peak], ['--violet', peak], // hero, section headings, the Auditor card and the footer sit on the bare page
   ]
   const val = (x) => (x.startsWith('#') ? x : v[x])
   const weak = text.map(([f, b]) => [f, b, ratio(val(f), val(b))]).filter(([, , r]) => r < 4.5)
