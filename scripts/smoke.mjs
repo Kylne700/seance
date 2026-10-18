@@ -604,7 +604,7 @@ async function auditorWalk(page, tag, { live, w, wide, which }) {
   check(run.bars.length >= 10 && ticks.size >= 10 && run.bars.every((b) => b.max === 50000 && b.value > 0 && b.value <= b.max && b.label === 'Counting the amounts' && /^Note [12] of 2: amounts up to [\d,]+ tried$/.test(b.tick)), `${d}: while it counts, the Auditor shows a progress bar and the count so far (${run.bars.length} updates)`, JSON.stringify(run.bars.slice(0, 2)))
   check(run.cards === 1, `${d}: the "Counting…" card is drawn once, so a screen reader hears it once and not once per slice`, `${run.cards}`)
   const longest = Math.max(0, ...run.long)
-  check(longest < 100, `${d}: the page never froze for 100 ms while the audit key counted (${took} ms in all; longest task ${longest} ms; ${run.long.length} tasks of 50 ms or more)`, run.long.join(' '))
+  check(longest < 100, `${d}: the page never froze for 100 ms while the audit key counted (${took} ms in all; ${run.long.length} tasks of 50 ms or more${longest ? `, the longest ${longest} ms` : ''})`, run.long.join(' '))
   await page.evaluate((onTheSide) => document.getElementById('audit-reading').scrollIntoView({ block: onTheSide ? 'center' : 'end' }), wide)
   await shot(page, `seance-${w}-${mode}-ghosts.png`)
   await shotEl(page, '#leaks', `seance-${w}-${mode}-leaks.png`)
@@ -654,7 +654,7 @@ async function auditorWalk(page, tag, { live, w, wide, which }) {
     leaksChecks(s, u, e)
   }
   const all = Math.max(0, ...(await page.evaluate(() => window.__long)))
-  check(all < 100, `${tag}: no task of 100 ms or more anywhere in the Auditor walk (longest ${all} ms)`)
+  check(all < 100, `${tag}: no task of 100 ms or more anywhere in the Auditor walk (${all ? `the longest ${all} ms` : 'none of 50 ms or more'})`)
 }
 
 // The same on a phone four times slower: the slices adapt to the speed, so the page still never freezes, only the count takes longer.
@@ -706,8 +706,8 @@ async function slowRun(browser) {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
   auditReads(again, t, `${tag}, counted again: the audit key`)
   const longest = Math.max(0, ...run.long)
-  check(longest < 100 && run.bars.length >= 10 && run.cards === 1, `${tag}: the Auditor never froze the page for 100 ms (${took} ms in all; longest task ${longest} ms; ${run.long.length} tasks of 50 ms or more; ${run.bars.length} progress updates; "Counting" card drawn ${run.cards} time)`, run.long.join(' '))
-  check(Math.max(0, ...first.long) < 200, `${tag}: drawing the cards at the click, with the first slice, took no task of 200 ms or more (longest ${Math.max(0, ...first.long)} ms)`)
+  check(longest < 100 && run.bars.length >= 10 && run.cards === 1, `${tag}: the Auditor never froze the page for 100 ms (${took} ms in all; ${run.long.length} tasks of 50 ms or more${longest ? `, the longest ${longest} ms` : ''}; ${run.bars.length} progress updates; "Counting" card drawn ${run.cards} time)`, run.long.join(' '))
+  check(Math.max(0, ...first.long) < 200, `${tag}: drawing the cards at the click, with the first slice, took no task of 200 ms or more (the longest ${Math.max(0, ...first.long) || 'under 50'} ms)`)
   await page.close()
 }
 
