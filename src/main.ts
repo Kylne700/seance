@@ -2,7 +2,7 @@ import { createData, demoKeys, demos, LookupError, type Shown } from './data.ts'
 import { isViewSecret, listen } from './decrypt.ts'
 import { clear, h } from './dom.ts'
 import { outcomeLabel, short } from './format.ts'
-import { explorerLink, renderReading, renderStranger, renderStrangerEmpty, type Hearing } from './render.ts'
+import { explorerLink, renderLeaks, renderReading, renderStranger, renderStrangerEmpty, type Hearing } from './render.ts'
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const el = document.getElementById(id)
@@ -14,6 +14,7 @@ const demo = $<HTMLSelectElement>('demo')
 const status = $('status')
 const strangerBody = $('stranger-body')
 const strangerCard = $('stranger')
+const leaksBody = $('leaks-body')
 const keysBox = $('keys')
 const ownKey = $<HTMLInputElement>('own-key')
 const ownHint = $('own-hint')
@@ -114,6 +115,7 @@ async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: 
     if (mine !== loadSeq) return
     current = shown
     renderStranger(strangerBody, shown)
+    renderLeaks(leaksBody, shown.view)
     mediumActions.replaceChildren(explorerLink(shown.view.id)) // the Medium card has its own link to the same transaction
     txid.value = shown.view.id
     history.replaceState(null, '', `#tx=${shown.view.id}`)
@@ -129,6 +131,7 @@ async function load(job: () => Promise<Shown>, opts: { key?: string; fromUser?: 
     if (mine !== loadSeq) return
     current = null
     renderStrangerEmpty(strangerBody)
+    renderLeaks(leaksBody, null)
     clear(mediumActions)
     reflectMode()
     if (e instanceof LookupError) setStatus(e.message, 'error')
@@ -174,6 +177,7 @@ ownKey.addEventListener('input', () => {
 
 reflectMode()
 renderStrangerEmpty(strangerBody)
+renderLeaks(leaksBody, null)
 void hear()
 const fromHash = /^#tx=([0-9a-f]{64})$/.exec(location.hash)
 if (fromHash) void load(() => data.lookup(fromHash[1]))

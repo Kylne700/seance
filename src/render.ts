@@ -4,7 +4,8 @@ import { explorerTx } from './config.ts'
 import type { Shown } from './data.ts'
 import type { Reading } from './decrypt.ts'
 import { clear, h } from './dom.ts'
-import { outcomeLabel, short, tari } from './format.ts'
+import { outcomeLabel, plural, short, tari, when } from './format.ts'
+import { leaks, paysFee, type Leak } from './leaks.ts'
 
 const MAX_NOTES = 6 // a transaction with more sealed notes than this is cut here, and says so
 
@@ -14,12 +15,6 @@ const KIND_CAPTION: Record<string, string> = {
   TakeFromBucket: 'Splits a public amount off the revealed funds.',
   PayFeeFromBucket: 'Pays the network fee, in the open.',
   CreateAccount: 'Opens a public account for a receiver.',
-}
-
-const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
-const when = (s: string | null): string => {
-  const m = s?.match(/^(\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d)/)
-  return m ? `${m[1]} ${m[2]} UTC` : (s ?? 'unknown')
 }
 
 const fact = (term: string, ...value: (Node | string)[]): HTMLElement => h('div', { class: 'fact' }, h('dt', null, term), h('dd', null, ...value))
@@ -66,7 +61,7 @@ function note(o: StealthOutput, i: number, total: number): HTMLElement {
 
 function statement(st: StealthStatement, n: number, feePaid: number | null): HTMLElement {
   const ro = st.revealedOut
-  const isFee = ro != null && feePaid != null && Number(ro.amount) === feePaid
+  const isFee = paysFee(st, feePaid)
   const shown = st.outputs.slice(0, MAX_NOTES)
   return h(
     'section',
@@ -108,6 +103,28 @@ export function renderStranger(body: HTMLElement, s: Shown): void {
 export function renderStrangerEmpty(body: HTMLElement): void {
   clear(body)
   body.append(h('p', { class: 'empty' }, 'Nothing on the table yet. Call up a transaction above.'))
+}
+
+function leakItem(l: Leak): HTMLElement {
+  const shown = l.values.slice(0, MAX_NOTES)
+  return h(
+    'div',
+    { class: 'leak', 'data-leak': l.id },
+    h('dt', null, l.term),
+    h(
+      'dd',
+      null,
+      ...(shown.length ? shown.map((x) => (l.mono ? hex(x) : h('p', { class: 'val' }, x))) : [h('p', { class: 'val none' }, 'None')]),
+      l.values.length > shown.length ? caption(`${l.values.length - shown.length} more not shown. The explorer lists them all.`) : null,
+      caption(l.caption),
+    ),
+  )
+}
+
+/** The "What still leaks" panel: the same transaction as the Stranger card, seen as a list of what stays public. */
+export function renderLeaks(body: HTMLElement, v: TxView | null): void {
+  clear(body)
+  body.append(v ? h('dl', { class: 'leak-list' }, ...leaks(v).map(leakItem)) : h('p', { class: 'empty' }, 'Nothing to inspect yet. Call up a transaction above.'))
 }
 
 export type Hearing = { kind: 'no-tx' } | { kind: 'no-key' } | { kind: 'silence' } | { kind: 'read'; who: string; readings: Reading[]; all: StealthOutput[] }

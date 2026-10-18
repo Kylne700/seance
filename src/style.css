@@ -160,6 +160,18 @@ summary .peek { font-family: var(--mono); font-size: .8125rem; color: var(--mute
 .veiled { display: flex; align-items: center; gap: 10px; margin: 10px 0 0; color: var(--muted); font-size: .875rem; }
 .bar { flex: none; width: 56px; height: 12px; border-radius: 6px; background: repeating-linear-gradient(135deg, #5a4f82 0 6px, #3d3558 6px 12px); }
 
+/* What still leaks */
+.leaks { margin-bottom: 48px; }
+.lead { max-width: 46rem; color: var(--muted); }
+.leak-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 0; }
+@media (min-width: 700px) { .leak-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .leak-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.leak { min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+.leak dt { color: var(--violet); font-size: .8125rem; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
+.leak dd { margin: 0; }
+.val { margin: 0 0 4px; font-weight: 600; }
+.val.none { color: var(--muted); font-weight: 400; font-style: italic; }
+
 /* Medium */
 .keys { border: 0; margin: 0 0 12px; padding: 0; min-width: 0; }
 .keys legend { font-weight: 600; padding: 0; margin-bottom: 8px; }

@@ -11,3 +11,11 @@ export const short = (h: string, n = 8): string => (h.length <= 2 * n + 1 ? h : 
 
 /** A transaction without a summary was rejected before it ran, or is not finalized yet. */
 export const outcomeLabel = (v: { outcome: string | null; rejectedReason: string | null }): string => v.outcome ?? (v.rejectedReason ? 'Rejected' : 'Not finalized yet')
+
+export const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
+
+/** "2026-10-18 16:55:51 UTC" from the indexer's timestamp, or the raw text when it has another shape. */
+export const when = (s: string | null): string => {
+  const m = s?.match(/^(\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d)/)
+  return m ? `${m[1]} ${m[2]} UTC` : (s ?? 'unknown')
+}
