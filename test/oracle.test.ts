@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import ledger from '../ledger.json'
 import { parseTransaction } from '../src/chain.ts'
-import { decryptOutput } from '../src/decrypt.ts'
+import { decryptOutput, listen } from '../src/decrypt.ts'
 
 interface Expected {
   outputs: { output: string; reader: string | null; value?: string; memo?: string | null }[]
@@ -93,5 +93,41 @@ describe('tampering and bad keys', () => {
   })
   it('a key one bit away from the right one is silence', async () => {
     expect(await decryptOutput(flipHex(key, 0), output)).toBeNull()
+  })
+})
+
+describe('what the size of a sealed note gives away', () => {
+  it('a note without a memo is 80 bytes; a note with a memo is longer (the caption on the page says exactly this)', () => {
+    for (const tx of txs.filter((t) => t.kind === 'blinded')) {
+      const view = parseTransaction(tx.reply)
+      const e = tx.expected.outputs.find((o) => o.reader)!
+      const [s, i] = e.output.split('.').map(Number)
+      const bytes = view.statements[s].outputs[i].ciphertextBytes
+      if (tx.memo) expect(bytes, `${tx.key} has a memo`).toBeGreaterThan(80)
+      else expect(bytes, `${tx.key} has no memo`).toBe(80)
+    }
+  })
+})
+
+describe('listen: one key on every sealed note of a transaction', () => {
+  const outputsOf = (tx: (typeof txs)[number]) => parseTransaction(tx.reply).outputs
+  const first = txs[0]
+
+  it('the right key opens exactly the note meant for it', async () => {
+    const reader = first.expected.outputs.find((o) => o.reader)!.reader!
+    const heard = await listen(keys[reader].viewSecret, outputsOf(first))
+    expect(heard).toHaveLength(1)
+    expect(heard[0].plain.value).toBe(BigInt(first.amount))
+    expect(heard[0].plain.memo).toBe(first.memo)
+  })
+  it('a key that fits nothing hears nothing: an empty list, not an error', async () => {
+    expect(await listen(keys.eve.viewSecret, outputsOf(first))).toEqual([])
+  })
+  it('the recipient hears nothing from a transaction where the amount was revealed', async () => {
+    const revealed = txs.find((t) => t.kind === 'revealed')!
+    expect(await listen(keys.bob.viewSecret, outputsOf(revealed))).toEqual([])
+  })
+  it('no notes, no sound', async () => {
+    expect(await listen(keys.bob.viewSecret, [])).toEqual([])
   })
 })
