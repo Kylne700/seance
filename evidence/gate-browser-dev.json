@@ -2,7 +2,7 @@
   "gate": "browser",
   "mode": "dev",
   "url": "http://127.0.0.1:5273/gate.html",
-  "when": "2026-10-18T16:53:04.647Z",
+  "when": "2026-10-18T17:00:46.834Z",
   "chromium": "Chrome/154.0.8037.92",
   "pass": true,
   "checks": {
@@ -25,7 +25,7 @@
     },
     "indexer": {
       "fetched": true,
-      "ms": 338,
+      "ms": 319,
       "id": "82583c6e1d3f14a3fb33c8c22415361bcd5a96585af55a34462197996f9e8ad4",
       "outcome": "Commit",
       "feePaid": 100000,
@@ -63,7 +63,7 @@
       "acao": "http://127.0.0.1:5273"
     },
     {
-      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle-wasm/ootle_wasm.js?v=dfb2554d",
+      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle-wasm/ootle_wasm.js?v=6914dac3",
       "status": 200,
       "type": "script",
       "contentType": "text/javascript",
@@ -91,14 +91,14 @@
       "acao": "http://127.0.0.1:5273"
     },
     {
-      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle-wasm/ootle_wasm_bg.js?v=dfb2554d",
+      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle-wasm/ootle_wasm_bg.js?v=6914dac3",
       "status": 200,
       "type": "script",
       "contentType": "text/javascript",
       "acao": "http://127.0.0.1:5273"
     },
     {
-      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle/dist/index.js?v=dfb2554d",
+      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle/dist/index.js?v=6914dac3",
       "status": 200,
       "type": "script",
       "contentType": "text/javascript",
@@ -126,7 +126,7 @@
       "acao": "http://127.0.0.1:5273"
     },
     {
-      "url": "http://127.0.0.1:5273/node_modules/.vite/deps/@tari-project_indexer-client.js?v=e714c877",
+      "url": "http://127.0.0.1:5273/node_modules/.vite/deps/@tari-project_ootle-indexer.js?v=e1f299bf",
       "status": 200,
       "type": "script",
       "contentType": "text/javascript",

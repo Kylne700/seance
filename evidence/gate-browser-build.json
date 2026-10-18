@@ -2,7 +2,7 @@
   "gate": "browser",
   "mode": "build",
   "url": "http://127.0.0.1:4273/seance/gate.html",
-  "when": "2026-10-18T16:53:10.200Z",
+  "when": "2026-10-18T17:00:48.046Z",
   "chromium": "Chrome/154.0.8037.92",
   "pass": true,
   "checks": {
@@ -25,7 +25,7 @@
     },
     "indexer": {
       "fetched": true,
-      "ms": 355,
+      "ms": 383,
       "id": "82583c6e1d3f14a3fb33c8c22415361bcd5a96585af55a34462197996f9e8ad4",
       "outcome": "Commit",
       "feePaid": 100000,
@@ -46,7 +46,7 @@
         "plain": null
       }
     ],
-    "decryptMs": 10
+    "decryptMs": 7
   },
   "requests": [
     {
@@ -56,7 +56,7 @@
       "contentType": "text/html; charset=utf-8"
     },
     {
-      "url": "http://127.0.0.1:4273/seance/assets/gate-DpUhgei3.js",
+      "url": "http://127.0.0.1:4273/seance/assets/gate-DJ4RAnkY.js",
       "status": 200,
       "type": "script",
       "contentType": "text/javascript"
