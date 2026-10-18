@@ -2,6 +2,7 @@
 // A wrong key, a tampered ciphertext and an output that is not the key's all come back as null: silence, not an error.
 import { WasmStealthCrypto, decryptInputData, fromHexStr } from '@tari-project/ootle'
 import type { StealthOutput } from './chain.ts'
+import { plural } from './format.ts'
 
 export interface Plain {
   value: bigint // micro-tTARI
@@ -11,6 +12,10 @@ export interface Plain {
 let crypto: WasmStealthCrypto | undefined
 
 export const isViewSecret = (s: string): boolean => /^[0-9a-f]{64}$/.test(s)
+
+/** What is wrong with a pasted key, in words, or null when it is a view secret. A 64-character string is not "too short or too long", so it gets its own sentence. */
+export const viewSecretProblem = (s: string): string | null =>
+  isViewSecret(s) ? null : s.length === 64 ? 'That is 64 characters, but a view secret uses only 0-9 and a-f.' : `A view secret is 64 hexadecimal characters (0-9 and a-f). You have typed ${plural(s.length, 'character')}.`
 
 // The wasm returns the memo as the JSON of Rust's `Memo` enum: {"Message":"text"} | {"U256":..} | {"Bytes":[..]} | {"PayRefAndBytes":..}
 export function memoText(json: string | undefined | null): string | null {

@@ -36,6 +36,9 @@ export const outcomeLabel = (v: { outcome: string | null; rejectedReason: string
 
 export const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
 
+/** "The other sealed note stays" for one, "The other 3 sealed notes stay" for more. Callers say nothing at all for 0. */
+export const theOther = (n: number, noun: string, verbOne: string, verbMany: string): string => `The other ${n === 1 ? `${noun} ${verbOne}` : `${n} ${noun}s ${verbMany}`}`
+
 /** "2026-10-18 16:55:51 UTC" from the indexer's timestamp, or the raw text when it has another shape. */
 export const when = (s: string | null): string => {
   const m = s?.match(/^(\d{4}-\d\d-\d\d) (\d\d:\d\d:\d\d)/)

@@ -517,6 +517,8 @@ async function walk(browser, { mode, w }) {
   await counted(page)
   await layout(page, `${tag} all three ghosts at work`, { wide })
   await axe(page, `${tag} all three ghosts at work (demo ${demoNo(hero(1))})`)
+  s = await snap(page)
+  check(s.readingText.includes('The other sealed note stays shut for this key.') && !/The other \d/.test(s.readingText), `${tag}: Bob's key opens one of the two notes of demo ${demoNo(hero(1))}, and the caption says "The other sealed note stays shut", not "The other 1"`, s.readingText.slice(-90))
   if (!wide) {
     await page.evaluate(() => document.querySelectorAll('#stranger details').forEach((d) => (d.open = true)))
     await layout(page, `${tag} with every note, audit proof and ciphertext opened`, { wide })

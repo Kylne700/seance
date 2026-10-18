@@ -5,7 +5,7 @@ import { explorerTx } from './config.ts'
 import type { Shown } from './data.ts'
 import type { Reading } from './decrypt.ts'
 import { clear, h } from './dom.ts'
-import { amountOf, baseUnits, outcomeLabel, plural, short, tari, when } from './format.ts'
+import { amountOf, baseUnits, outcomeLabel, plural, short, tari, theOther, when } from './format.ts'
 import { leaks, paysFee, type Leak } from './leaks.ts'
 import { notes, summary, TRICKS, type Report, type Score, type TrickId } from './poltergeist.ts'
 
@@ -208,7 +208,7 @@ export function renderReading(el: HTMLElement, hearing: Hearing): void {
         )
       }
       const shut = all.length - readings.length
-      el.append(caption(`Read inside this page with ${who}. Nothing was sent anywhere.${shut > 0 ? ` The other ${plural(shut, 'sealed note')} ${shut === 1 ? 'stays' : 'stay'} shut for this key.` : ''}`))
+      el.append(caption(`Read inside this page with ${who}. Nothing was sent anywhere.${shut > 0 ? ` ${theOther(shut, 'sealed note', 'stays', 'stay')} shut for this key.` : ''}`))
       break
     }
   }
@@ -257,7 +257,7 @@ export function renderAudit(el: HTMLElement, a: Audit): void {
         )
       }
       const bare = all.length - heard.length
-      el.append(caption(`Counted inside this page with ${who}. Nothing was sent anywhere. The search covers 0 to ${amountOf(heard[0].output.resource, RANGE_MAX)}.${bare > 0 ? ` The other ${plural(bare, 'sealed note')} ${bare === 1 ? 'carries' : 'carry'} no proof for this key.` : ''}`))
+      el.append(caption(`Counted inside this page with ${who}. Nothing was sent anywhere. The search covers 0 to ${amountOf(heard[0].output.resource, RANGE_MAX)}.${bare > 0 ? ` ${theOther(bare, 'sealed note', 'carries', 'carry')} no proof for this key.` : ''}`))
       break
     }
   }

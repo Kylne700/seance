@@ -1,6 +1,6 @@
 import { audit, audited } from './auditor.ts'
 import { createData, demoKeys, demos, LookupError, recordedWorld, type Demo, type Shown } from './data.ts'
-import { isViewSecret, listen } from './decrypt.ts'
+import { listen, viewSecretProblem } from './decrypt.ts'
 import { clear, h } from './dom.ts'
 import { outcomeLabel, short } from './format.ts'
 import { poltergeist } from './poltergeist.ts'
@@ -64,7 +64,10 @@ function setBusy(on: boolean): void {
 // What the medium hears, from the key currently chosen (a demo key or a pasted one).
 function chosenKey(): { secret: string; who: string } | { problem: string } | null {
   const own = ownKey.value.trim().toLowerCase()
-  if (own) return isViewSecret(own) ? { secret: own, who: 'your key' } : { problem: `A view secret is 64 hexadecimal characters (0-9 and a-f). You have typed ${own.length}.` }
+  if (own) {
+    const problem = viewSecretProblem(own)
+    return problem ? { problem } : { secret: own, who: 'your key' }
+  }
   const radio = keysBox.querySelector<HTMLInputElement>('input[name=key]:checked')
   return radio ? { secret: demoKeys[radio.value].viewSecret, who: whoOf(radio.value) } : null
 }
