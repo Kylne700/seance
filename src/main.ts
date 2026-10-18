@@ -51,7 +51,7 @@ function reflectMode(): void {
   const recorded = data.mode === 'recorded'
   modeBadge.textContent = recorded ? 'Recorded' : 'Live'
   modeBadge.className = `badge ${data.mode}`
-  modeText.textContent = recorded ? 'Replaying answers saved earlier. This page asks nobody.' : 'Asking the Esmeralda indexer for one transaction at a time.'
+  modeText.textContent = recorded ? 'Replaying answers saved earlier. This page asks nobody. Press the button again to go back to live data.' : 'Asking the Esmeralda indexer for one transaction at a time.'
   modeSwitch.setAttribute('aria-pressed', String(recorded))
 }
 

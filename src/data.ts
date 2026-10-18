@@ -132,7 +132,10 @@ export function createData(opts: { timeoutMs?: number; pick?: (n: number) => num
       }
     }
     const reply = recorded.get(id)
-    if (!reply) throw new LookupError('not-recorded', 'Recorded mode only knows the demo transactions and a small sample. Switch to live data to look up any other id.')
+    if (!reply) {
+      // The page switched by itself just now, so the visitor must be told why before being told what recorded mode holds.
+      throw new LookupError('not-recorded', fellBack ? 'The indexer did not answer, and this id is not among the recorded transactions (the demos and a small sample). Switch to live data to try again.' : 'Recorded mode only knows the demo transactions and a small sample. Switch to live data to look up any other id.')
+    }
     return { view: parseTransaction(reply), mode, fellBack, quietChain: false, ours: false }
   }
 

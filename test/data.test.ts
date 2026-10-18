@@ -262,6 +262,15 @@ describe('automatic fallback to recorded data', () => {
     expect(await fails(createData().lookup(unknownId))).toBe('not-recorded')
   })
 
+  it('says why when the id is unknown because the indexer was down, not only what recorded mode holds', async () => {
+    blocked()
+    const e = await createData()
+      .lookup(unknownId)
+      .catch((x: unknown) => x)
+    expect(e).toBeInstanceOf(LookupError)
+    expect((e as LookupError).message).toMatch(/^The indexer did not answer, and this id is not among the recorded transactions/)
+  })
+
   it('the way back works: switching to live asks the indexer again', async () => {
     const fetchSpy = stubFetch(() => json(bobTx.reply))
     const data = createData()
