@@ -1,0 +1,12 @@
+Seance browser gate (dev) 2026-10-18T16:53:04.647Z
+url http://127.0.0.1:5273/gate.html
+chromium Chrome/154.0.8037.92
+tx 82583c6e1d3f14a3fb33c8c22415361bcd5a96585af55a34462197996f9e8ad4
+PASS  a. wasm loaded through the bundler
+PASS  b. page fetched the indexer itself, CORS ok
+PASS  c. in-page decrypt matches gate-c output
+PASS  d. 0 console errors, 0 page errors, 0 failed requests
+decrypt (right key): 1 of 2 outputs readable; value 1234567 uT, memo "seance spike gate c: can you read this?"; expected 1234567 uT, "seance spike gate c: can you read this?"
+indexer: 338 ms, outcome Commit, requests 1, ACAO *
+wasm exports 35; no .wasm request: true; console errors 0
+GATE PASS

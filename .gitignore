@@ -1,0 +1,10 @@
+node_modules/
+dist/
+dist-gate/
+*.log
+.env
+.env.*
+.keys/
+.walletd/
+.l1/
+tmp/

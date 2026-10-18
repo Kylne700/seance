@@ -1,0 +1,161 @@
+{
+  "gate": "browser",
+  "mode": "dev",
+  "url": "http://127.0.0.1:5273/gate.html",
+  "when": "2026-10-18T16:53:04.647Z",
+  "chromium": "Chrome/154.0.8037.92",
+  "pass": true,
+  "checks": {
+    "a. wasm loaded through the bundler": true,
+    "b. page fetched the indexer itself, CORS ok": true,
+    "c. in-page decrypt matches gate-c output": true,
+    "d. 0 console errors, 0 page errors, 0 failed requests": true
+  },
+  "expected": {
+    "amount": "1234567",
+    "memo": "seance spike gate c: can you read this?"
+  },
+  "result": {
+    "origin": "http://127.0.0.1:5273",
+    "path": "/gate.html",
+    "wasm": {
+      "loaded": true,
+      "exports": 35,
+      "hasDecryptElgamal": true
+    },
+    "indexer": {
+      "fetched": true,
+      "ms": 338,
+      "id": "82583c6e1d3f14a3fb33c8c22415361bcd5a96585af55a34462197996f9e8ad4",
+      "outcome": "Commit",
+      "feePaid": 100000,
+      "outputs": 2
+    },
+    "decrypt": [
+      {
+        "output": "0.0",
+        "ciphertextBytes": 144,
+        "plain": {
+          "value": "1234567",
+          "memo": "seance spike gate c: can you read this?"
+        }
+      },
+      {
+        "output": "0.1",
+        "ciphertextBytes": 80,
+        "plain": null
+      }
+    ],
+    "decryptMs": 10
+  },
+  "requests": [
+    {
+      "url": "http://127.0.0.1:5273/gate.html",
+      "status": 200,
+      "type": "document",
+      "contentType": "text/html"
+    },
+    {
+      "url": "http://127.0.0.1:5273/src/gate.ts",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle-wasm/ootle_wasm.js?v=dfb2554d",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/src/config.ts",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/src/chain.ts",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/src/decrypt.ts",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle-wasm/ootle_wasm_bg.js?v=dfb2554d",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle/dist/index.js?v=dfb2554d",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/node_modules/@tari-project/ootle-wasm/ootle_wasm_bg.wasm?import",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/@vite/client",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/node_modules/vite/dist/client/env.mjs",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/node_modules/.vite/deps/@tari-project_indexer-client.js?v=e714c877",
+      "status": 200,
+      "type": "script",
+      "contentType": "text/javascript",
+      "acao": "http://127.0.0.1:5273"
+    },
+    {
+      "url": "http://127.0.0.1:5273/favicon.svg",
+      "status": 200,
+      "type": "other",
+      "contentType": "image/svg+xml"
+    },
+    {
+      "url": "https://ootle-indexer-a.tari.com/transactions/82583c6e1d3f14a3fb33c8c22415361bcd5a96585af55a34462197996f9e8ad4",
+      "status": 200,
+      "type": "fetch",
+      "contentType": "application/json",
+      "acao": "*"
+    }
+  ],
+  "console": [
+    {
+      "type": "debug",
+      "text": "[vite] connecting..."
+    },
+    {
+      "type": "debug",
+      "text": "[vite] connected."
+    }
+  ],
+  "pageErrors": [],
+  "fail": null
+}
