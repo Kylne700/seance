@@ -23,6 +23,7 @@ const PORT = Number(process.env.SMOKE_PORT ?? 4273)
 const OWN = `127.0.0.1:${PORT}`
 const BASE = `http://${OWN}/seance/`
 const INDEXER_HOST = new URL(INDEXER_URL).host
+const PUBLIC_URL = 'https://kylne700.github.io/seance/' // where the site lives; the link-preview tags in index.html must name it
 const ledger = JSON.parse(readFileSync(join(APP, 'ledger.json'), 'utf8'))
 const keys = ledger.keys
 const tx = (n) => ledger.txs[n - 1]
@@ -767,6 +768,69 @@ async function hangRun(browser) {
   await page.close()
 }
 
+// ---------- a link with the id in capitals ----------
+async function hashRun(browser) {
+  const tag = 'uppercase #tx= link'
+  const { page, log } = await open(browser, { w: 1280, url: `${BASE}#tx=${tx(2).id.toUpperCase()}` })
+  await settled(page)
+  const s = await snap(page)
+  check(s.shownId === tx(2).id && /^Recorded:/.test(s.source ?? ''), `${tag}: the Stranger shows the transaction an id in capitals names (the id is lower-cased first)`, String(s.shownId).slice(0, 12))
+  check(/^The indexer did not answer, so the page switched to recorded data\./.test(s.status), `${tag}: the load's own status shows, not the loading line`, s.status.slice(0, 70))
+  check(log.pageErrors.length === 0, `${tag}: no page error`, log.pageErrors.join(' | '))
+  await page.close()
+}
+
+// ---------- the code is still loading ----------
+async function loadingRun(browser) {
+  const tag = 'while the code loads'
+  const page = await browser.newPage()
+  await page.setViewport({ width: 390, height: 800, deviceScaleFactor: 1, isMobile: true, hasTouch: true })
+  const problems = []
+  page.on('pageerror', (e) => problems.push(String(e)))
+  await page.setRequestInterception(true)
+  const held = []
+  page.on('request', (r) => (r.resourceType() === 'script' ? held.push(r) : r.continue())) // every script waits, as on a slow link
+  const nav = page.goto(BASE, { waitUntil: 'load', timeout: 60000 })
+  nav.catch(() => {}) // the load event waits for the held scripts; it is awaited below, after they are let go
+  await page.waitForSelector('#look')
+  await sleep(400)
+  const probe = () =>
+    page.evaluate(() => ({
+      status: document.getElementById('status').textContent,
+      options: document.querySelectorAll('#demo option').length,
+      buttons: ['look', 'summon', 'hold', 'mode-switch'].map((id) => {
+        const b = document.getElementById(id)
+        const c = getComputedStyle(b)
+        return { id, aria: b.getAttribute('aria-disabled'), disabled: b.disabled, opacity: Number(c.opacity), cursor: c.cursor }
+      }),
+    }))
+  const early = await probe()
+  check(held.length > 0 && early.options === 0, `${tag}: the scripts are held back, so the page has none of its code yet`, `${held.length} held, ${early.options} demo options`)
+  check(/is still loading/.test(early.status), `${tag}: a loading line shows`, early.status)
+  check(early.buttons.every((b) => b.aria === 'true' && b.opacity < 1 && b.cursor === 'progress'), `${tag}: all four buttons say not ready (aria-disabled, dimmed, a progress cursor)`, early.buttons.map((b) => `${b.id}:${b.aria}`).join(' '))
+  check(early.buttons.find((b) => b.id === 'look')?.disabled === true, `${tag}: "Look at it" is also disabled, being a submit button (a click or Enter on it would make the browser cancel the code that is still on its way)`)
+  await shot(page, 'seance-390-loading.png')
+  for (const id of ['summon', 'hold', 'look']) await page.click(`#${id}`)
+  await page.focus('#txid')
+  await page.keyboard.type('abc')
+  await page.keyboard.press('Enter')
+  await sleep(300)
+  const after = await probe()
+  check(page.url() === BASE && after.status === early.status, `${tag}: a click on a button, or Enter in the id field, does nothing yet (no navigation, the line stays)`, page.url())
+  for (const r of held) r.continue()
+  await nav
+  await until(page, () => document.querySelectorAll('#demo option').length > 0, undefined, 20000)
+  const ready = await probe()
+  check(ready.status === '', `${tag}: the loading line is gone once the code has run`, ready.status)
+  check(ready.buttons.every((b) => b.aria === null && b.opacity === 1), `${tag}: the four buttons are ready (no aria-disabled, no dimming)`, ready.buttons.map((b) => `${b.id}:${b.aria}`).join(' '))
+  await page.click('#hold')
+  await settled(page)
+  const s = await snap(page)
+  check(s.shownId === hero(1).id, `${tag}: the first click after that works`, String(s.shownId).slice(0, 12))
+  check(problems.length === 0, `${tag}: no page error`, problems.join(' | '))
+  await page.close()
+}
+
 // ---------- keyboard only ----------
 async function keyboardRun(browser) {
   const tag = 'keyboard 1280px'
@@ -936,6 +1000,22 @@ async function cspRun(browser) {
   await page.close()
 }
 
+// ---------- the link preview ----------
+// Served under /seance/ like the real site: the tags parse in the browser, they name the public address, and og.png is where they say it is.
+async function previewRun(browser) {
+  const { page } = await open(browser, { w: 1280 })
+  const tags = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('meta[property^="og:"], meta[name="twitter:card"]')].map((m) => [m.getAttribute('property') ?? m.getAttribute('name'), m.content])))
+  await page.close()
+  const need = ['og:type', 'og:url', 'og:title', 'og:description', 'og:image', 'twitter:card']
+  check(need.every((k) => tags[k]) && tags['twitter:card'] === 'summary_large_image' && tags['og:type'] === 'website', 'preview: og:type, og:url, og:title, og:description, og:image and twitter:card (summary_large_image) are set', JSON.stringify(Object.keys(tags)))
+  check(tags['og:url'] === PUBLIC_URL && tags['og:image'] === `${PUBLIC_URL}og.png`, 'preview: og:url and og:image are absolute and name the public address', `${tags['og:url']} ${tags['og:image']}`)
+  check(tags['og:description'].length <= 300, 'preview: og:description is short enough to show whole', String(tags['og:description'].length))
+  const res = await fetch(`${BASE}og.png`) // the same path under the served prefix as the public address uses
+  const png = Buffer.from(await res.arrayBuffer())
+  check(res.status === 200 && png.subarray(1, 4).toString() === 'PNG' && png.readUInt32BE(16) === 1200 && png.readUInt32BE(20) === 630, 'preview: /seance/og.png is served and is a 1200 x 630 PNG', `${res.status} ${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`)
+  check(png.length <= 300 * 1024, 'preview: og.png is at most 300 KB', `${png.length} bytes`)
+}
+
 // ---------- the built files ----------
 function staticChecks() {
   const html = readFileSync(join(DIST, 'index.html'), 'utf8')
@@ -944,7 +1024,7 @@ function staticChecks() {
   check(rooted.length === 0 && refs.some((u) => u.startsWith('./assets/')), 'build: asset paths are relative (works under /seance/)', rooted.join(', ') || refs.filter((u) => !u.startsWith('http')).join(' '))
   check(!/<script(?![^>]*\bsrc=)/i.test(html) && !/\sstyle=/i.test(html), 'build: no inline script or style in index.html')
   check(!existsSync(join(DIST, 'gate.html')) && existsSync(join(DIST, 'THIRD-PARTY-LICENSES.md')) && existsSync(join(DIST, 'favicon.svg')), 'build: no gate page shipped; third-party licence notices and favicon are')
-  const allowed = new Set([INDEXER_HOST, new URL(EXPLORER_URL).host, 'ootle.tari.com', 'www.w3.org'])
+  const allowed = new Set([INDEXER_HOST, new URL(EXPLORER_URL).host, 'ootle.tari.com', 'www.w3.org', new URL(PUBLIC_URL).host]) // the last one only in the link-preview tags: the page fetches nothing from it
   const found = new Map()
   const walkDir = (d) => {
     for (const n of readdirSync(d)) {
@@ -955,7 +1035,7 @@ function staticChecks() {
   }
   walkDir(DIST)
   const stray = [...found.keys()].filter((h) => !allowed.has(h))
-  check(stray.length === 0, `build: every host named in the built files is expected (${[...found.keys()].join(', ')}); the w3.org one is the SVG namespace in the favicon`, stray.join(', '))
+  check(stray.length === 0, `build: every host named in the built files is expected (${[...found.keys()].join(', ')}); the w3.org one is the SVG namespace in the favicon, the github.io one is this site's own address in the preview tags`, stray.join(', '))
 }
 
 // ---------- main ----------
@@ -981,6 +1061,7 @@ say(`Seance smoke test of dist/ at ${BASE}, ${new Date().toISOString()}, ${await
 try {
   section('the built files')
   staticChecks()
+  await scenario('preview', () => previewRun(online))
   section('the block works (control for the recorded runs)')
   await scenario('block control', async () => {
     const p = await offline.newPage()
@@ -997,6 +1078,8 @@ try {
   section('the indexer goes away')
   for (const w of [1280, 390]) await scenario(`fallback ${w}`, () => fallbackRun(offline, w))
   await scenario('hang', () => hangRun(online))
+  await scenario('uppercase link', () => hashRun(offline))
+  await scenario('loading', () => loadingRun(offline))
   section('keyboard, reduced motion, a slow phone, policy')
   await scenario('keyboard', () => keyboardRun(offline))
   await scenario('motion', () => motionRun(offline))

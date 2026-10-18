@@ -5,7 +5,7 @@ import ledger from '../ledger.json'
 import { INDEXER_URL, RECENT_LIMIT } from '../src/config.ts'
 import { createData, demos, LookupError, ourIds, type Problem } from '../src/data.ts'
 import { decryptOutput, listen } from '../src/decrypt.ts'
-import type { TxView } from '../src/chain.ts'
+import { txFromHash, type TxView } from '../src/chain.ts'
 
 interface Expected {
   outputs: { output: string; reader: string | null; value?: string; memo?: string | null }[]
@@ -97,6 +97,21 @@ describe('recorded mode (the switch is on, or the network is blocked)', () => {
     expect((await data.lookup(`  ${bobTx.id.toUpperCase()}\n`)).view.id).toBe(bobTx.id)
     for (const bad of ['', 'abc', 'zz'.repeat(32), bobTx.id + '0', bobTx.id.slice(1)]) expect(await fails(data.lookup(bad))).toBe('bad-id')
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('a #tx= link works with the id in capitals or mixed case, and the same id comes out in lower case', () => {
+    const id = bobTx.id
+    expect(txFromHash(`#tx=${id}`)).toBe(id) // lower case first: the case that always worked
+    expect(txFromHash(`#tx=${id.toUpperCase()}`)).toBe(id)
+    const mixed = [...id].map((c, i) => (i % 2 ? c.toUpperCase() : c)).join('')
+    expect(mixed).not.toBe(id)
+    expect(txFromHash(`#tx=${mixed}`)).toBe(id)
+    expect(txFromHash(`#TX=${id.toUpperCase()}`)).toBe(id)
+  })
+
+  it('an address that carries no valid id gives null, so the page does not look anything up', () => {
+    const id = bobTx.id
+    for (const bad of ['', '#', '#tx=', '#tx=abc', `#tx=${id}0`, `#tx=${id.slice(1)}`, `#tx=${'zz'.repeat(32)}`, `#tx=${id}&x=1`, `#id=${id}`, id, `#tx= ${id}`]) expect(txFromHash(bad)).toBeNull()
   })
 })
 

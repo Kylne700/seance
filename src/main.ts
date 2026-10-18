@@ -1,4 +1,5 @@
 import { audit, audited } from './auditor.ts'
+import { txFromHash } from './chain.ts'
 import { createData, demoKeys, demos, LookupError, recordedWorld, type Demo, type Shown } from './data.ts'
 import { listen, viewSecretProblem } from './decrypt.ts'
 import { clear, h } from './dom.ts'
@@ -214,11 +215,17 @@ ownKey.addEventListener('input', () => {
   void hear()
 })
 
+// Ready. index.html ships a loading line and buttons marked not ready; clear both here, before the address is read (it may start a load).
+// "Look at it" also ships `disabled`: a click or Enter on a submit button before this point makes the browser cancel the page's pending code (the form is blocked by the CSP, the load is not resumed).
+for (const b of [...buttons, modeSwitch]) b.removeAttribute('aria-disabled')
+$('look').removeAttribute('disabled')
+setStatus('')
+
 reflectMode()
 renderStrangerEmpty(strangerBody)
 renderLeaks(leaksBody, null)
 renderPoltergeist($('polt-body'), poltergeist(recordedWorld())) // recorded data only: the same numbers on every visit
 void hear()
 void count()
-const fromHash = /^#tx=([0-9a-f]{64})$/.exec(location.hash)
-if (fromHash) void load(() => data.lookup(fromHash[1]))
+const fromHash = txFromHash(location.hash)
+if (fromHash) void load(() => data.lookup(fromHash))

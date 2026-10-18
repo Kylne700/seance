@@ -60,6 +60,9 @@ const str = (v: unknown): string | null => (typeof v === 'string' ? v : null)
 
 export const isTxId = (s: string): boolean => /^[0-9a-f]{64}$/.test(s)
 
+/** The id in a `#tx=<64 hex>` link, lower-cased first (links get typed and pasted in capitals), or null when the address carries none. */
+export const txFromHash = (hash: string): string | null => /^#tx=([0-9a-f]{64})$/.exec(hash.toLowerCase())?.[1] ?? null
+
 /** Accepts the reply of getTransaction ({ transaction: item }) or a bare item from listRecentTransactions. */
 export function parseTransaction(reply: unknown): TxView {
   const top = obj(reply, 'reply')
