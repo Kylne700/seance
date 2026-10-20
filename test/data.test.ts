@@ -231,20 +231,20 @@ describe('live mode', () => {
 })
 
 describe('automatic fallback to recorded data', () => {
-  const cases: [string, () => unknown][] = [
-    ['the connection is refused', () => blocked()],
-    ['the indexer does not answer in time', () => never()],
-    ['the indexer answers 500', () => stubFetch(() => json({ error: 'boom' }, 500))],
-    ['the indexer answers 503', () => stubFetch(() => json({ error: 'down' }, 503))],
-    ['the indexer throttles us (429)', () => stubFetch(() => json({ error: 'slow down' }, 429))],
-    ['a demo id answers 404 (the testnet was reset)', () => stubFetch(() => json({ error: 'not known to this indexer' }, 404))],
+  const cases: [string, () => unknown, boolean][] = [ // [name, arrange, the indexer answered but no longer holds the demo]
+    ['the connection is refused', () => blocked(), false],
+    ['the indexer does not answer in time', () => never(), false],
+    ['the indexer answers 500', () => stubFetch(() => json({ error: 'boom' }, 500)), false],
+    ['the indexer answers 503', () => stubFetch(() => json({ error: 'down' }, 503)), false],
+    ['the indexer throttles us (429)', () => stubFetch(() => json({ error: 'slow down' }, 429)), false],
+    ['a demo id answers 404 (the indexer no longer holds it: dropped history or a testnet reset)', () => stubFetch(() => json({ error: 'not known to this indexer' }, 404)), true],
   ]
-  for (const [name, arrange] of cases) {
+  for (const [name, arrange, forgotten] of cases) {
     it(`${name}: the page switches to recorded, says so, and the demo still reads right`, async () => {
       arrange()
       const data = createData({ timeoutMs: 40 })
       const shown = await data.lookup(bobTx.id)
-      expect(shown).toMatchObject({ mode: 'recorded', fellBack: true })
+      expect(shown).toMatchObject({ mode: 'recorded', fellBack: true, forgotten })
       expect(data.mode).toBe('recorded')
       await expectsReading(shown.view, bobTx)
       // end to end: the very same words reach the medium
@@ -268,7 +268,7 @@ describe('automatic fallback to recorded data', () => {
     blocked()
     const data = createData({ pick: () => 0 })
     const shown = await data.recent()
-    expect(shown).toMatchObject({ mode: 'recorded', fellBack: true })
+    expect(shown).toMatchObject({ mode: 'recorded', fellBack: true, forgotten: false })
     expect(data.mode).toBe('recorded')
   })
 

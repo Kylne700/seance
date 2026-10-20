@@ -170,7 +170,7 @@ describe('change one field and only its item changes', () => {
     only('times', c)
   })
   it('epoch window', () => {
-    expect(edit((v) => (v.minEpoch = 12400)).epochs).toEqual(['Epochs 12400 to 12442'])
+    expect(edit((v) => (v.minEpoch = 12400)).epochs).toEqual([`Epochs 12400 to ${base.maxEpoch}`])
     expect(edit((v) => (v.maxEpoch = null)).epochs).toEqual([])
     expect(edit((v) => ((v.maxEpoch = null), (v.minEpoch = 7))).epochs).toEqual(['Epoch 7 or later'])
     only('epochs', edit((v) => (v.maxEpoch = 99)))

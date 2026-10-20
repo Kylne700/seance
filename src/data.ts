@@ -23,6 +23,8 @@ export interface Shown {
   mode: Mode
   /** This very call found the indexer unusable and switched the page to recorded data. */
   fellBack: boolean
+  /** The switch was not an outage: the indexer answered 404 for a transaction we hold a recording of, so it no longer holds it (it was dropped, or the testnet was reset). */
+  forgotten: boolean
   /** Live was up but had no private transfer among the latest transactions, so a recorded one was used. */
   quietChain: boolean
   /** Summon found nobody else's private transfer, so this is one of the transactions we sent for this page. */
@@ -117,9 +119,10 @@ export function createData(opts: { timeoutMs?: number; pick?: (n: number) => num
     const id = raw.trim().toLowerCase()
     if (!isTxId(id)) throw new LookupError('bad-id', 'A transaction id is 64 hexadecimal characters (0-9 and a-f).')
     let fellBack = false
+    let forgotten = false
     if (mode === 'live') {
       try {
-        return { view: parseTransaction(await within(client.getTransaction(id))), mode, fellBack, quietChain: false, ours: false }
+        return { view: parseTransaction(await within(client.getTransaction(id))), mode, fellBack, forgotten, quietChain: false, ours: false }
       } catch (e) {
         if (e instanceof ParseError) throw new LookupError('format', 'The indexer answered, but this transaction has a shape this page does not know. The explorer link still works.')
         const status = (e as { status?: number }).status
@@ -129,6 +132,7 @@ export function createData(opts: { timeoutMs?: number; pick?: (n: number) => num
         if (!indexerDown(e) && !reset) throw new LookupError('bad-id', 'The indexer did not accept this id.')
         mode = 'recorded'
         fellBack = true
+        forgotten = reset
       }
     }
     const reply = recorded.get(id)
@@ -136,7 +140,7 @@ export function createData(opts: { timeoutMs?: number; pick?: (n: number) => num
       // The page switched by itself just now, so the visitor must be told why before being told what recorded mode holds.
       throw new LookupError('not-recorded', fellBack ? 'The indexer did not answer, and this id is not among the recorded transactions (the demos and a small sample). Switch to live data to try again.' : 'Recorded mode only knows the demo transactions and a small sample. Switch to live data to look up any other id.')
     }
-    return { view: parseTransaction(reply), mode, fellBack, quietChain: false, ours: false }
+    return { view: parseTransaction(reply), mode, fellBack, forgotten, quietChain: false, ours: false }
   }
 
   async function recent(): Promise<Shown> {
@@ -150,15 +154,15 @@ export function createData(opts: { timeoutMs?: number; pick?: (n: number) => num
         const pool = candidates(withNotes((await within(client.listRecentTransactions({ limit: RECENT_LIMIT, last_id: null, source: null }))).transactions))
         if (pool.length) {
           const view = pool[pick(pool.length)]
-          return { view, mode, fellBack, quietChain: false, ours: ourIds.has(view.id) }
+          return { view, mode, fellBack, forgotten: false, quietChain: false, ours: ourIds.has(view.id) }
         }
-        return { view: sample(), mode: 'recorded', fellBack, quietChain: true, ours: false }
+        return { view: sample(), mode: 'recorded', fellBack, forgotten: false, quietChain: true, ours: false }
       } catch {
         mode = 'recorded'
         fellBack = true
       }
     }
-    return { view: sample(), mode, fellBack, quietChain: false, ours: false }
+    return { view: sample(), mode, fellBack, forgotten: false, quietChain: false, ours: false }
   }
 
   return {

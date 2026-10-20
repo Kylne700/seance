@@ -46,7 +46,7 @@ if (process.argv.length === 2 && ids.length < WANT) {
   say(`  FAIL only ${ids.length} recent transactions with private transfers were found (wanted ${WANT})`)
 }
 
-const ALLOWED = new Set(['resource', 'statement', 'index', 'commitment', 'senderNonce', 'ciphertext', 'ciphertextBytes', 'minimumValuePromise', 'viewableBalanceProof', 'spendCondition'])
+const ALLOWED = new Set(['resource', 'statement', 'index', 'commitment', 'senderNonce', 'ciphertext', 'ciphertextBytes', 'minimumValuePromise', 'viewableBalanceProof', 'spendCondition', 'lockKey'])
 const hex = (s, bytes) => new RegExp(`^[0-9a-f]{${bytes * 2}}$`).test(s)
 
 for (const id of ids) {

@@ -90,10 +90,12 @@ if (!process.argv.includes('--capture')) {
     let entry = ledger.txs.find((t) => t.key === plan.key)
     if (!entry) {
       const k = ledger.keys[plan.to]
+      // ConfidentialOnly, both for the payment and for the fee: an account that holds a public balance would otherwise pay from it
+      // (PreferRevealed), and then the amount sits in the open and the sealed note hides nothing.
       const req = (dry_run) => ({
         owner_account: { Name: ACCOUNT },
-        fee_params: { input_selection: 'PreferRevealed', pay_fee_with_swap: null },
-        input_selection: 'PreferRevealed',
+        fee_params: { input_selection: 'ConfidentialOnly', pay_fee_with_swap: null },
+        input_selection: 'ConfidentialOnly',
         resource_address: TARI_RESOURCE_ADDRESS,
         transfers: [{
           destination_address: k.address,

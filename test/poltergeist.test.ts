@@ -31,17 +31,17 @@ const world = recordedWorld()
 const FULL = { tied: 11, of: 11, wrong: 0 }
 
 describe('the recorded world', () => {
-  it('holds the 11 demo payments and 9 transactions that are not ours', () => {
+  it('holds the 11 demo payments and 1 transaction that is not ours', () => {
     expect(world.payments.map((p) => p.id)).toEqual(world.views.map((v) => v.id))
     expect(world.payments).toHaveLength(11)
-    expect(world.crowd).toHaveLength(9)
+    expect(world.crowd).toHaveLength(1)
     expect(world.crowd.filter((v) => ourIds.has(v.id))).toEqual([])
   })
-  it('the sample is those 9, one of the demos (captured mid-run) and the two earlier transactions of ours', () => {
+  it('the sample is that 1 and the first try of demo 1 (captured mid-run, before the re-send), which sits in ledger.earlier', () => {
     const ids = sample.map((t) => t.transaction_id)
-    expect(ids).toHaveLength(12)
-    expect(ids.filter((id) => world.payments.some((p) => p.id === id))).toHaveLength(1)
-    expect(ledger.earlier.map((e) => e.id).filter((id) => ids.includes(id))).toHaveLength(2)
+    expect(ids).toHaveLength(2)
+    expect(ids.filter((id) => world.payments.some((p) => p.id === id))).toHaveLength(0)
+    expect(ledger.earlier.map((e) => e.id).filter((id) => ids.includes(id))).toHaveLength(1)
     expect(world.crowd.map((v) => v.id).sort()).toEqual(ids.filter((id) => !ourIds.has(id)).sort())
   })
   it('the attacker is handed no key', () => {
@@ -53,21 +53,20 @@ describe('the recorded world', () => {
 describe('the expected numbers (the table on the page)', () => {
   const r = poltergeist(world)
   it('summary figures', () => {
-    expect({ gapMs: r.gapMs, of: r.of, crowd: r.crowd, spanSeconds: r.spanSeconds, fee: r.fee }).toEqual({ gapMs: 60_000, of: 11, crowd: 9, spanSeconds: 140, fee: 100000 })
+    expect({ gapMs: r.gapMs, of: r.of, crowd: r.crowd, spanSeconds: r.spanSeconds, fee: r.fee }).toEqual({ gapMs: 60_000, of: 11, crowd: 1, spanSeconds: 135, fee: 100000 })
   })
   it('on the synthetic transparent ledger every trick gets all 11', () => {
     expect(r.rows.map((x) => [x.id, x.transparent])).toEqual([['reuse', FULL], ['amount', FULL], ['timing', FULL], ['fee', FULL], ['spend', null]])
   })
-  it('on Tari: address reuse 0, amount matching 1, timing 11, fee 11, spend graph 11, none mixed up with the 9 others', () => {
+  it('on Tari: address reuse 0, amount matching 1, timing 11, fee 11, spend graph 11, none mixed up with the 1 other', () => {
     expect(r.rows.map((x) => [x.id, x.tari])).toEqual([['reuse', { tied: 0, of: 11, wrong: 0 }], ['amount', { tied: 1, of: 11, wrong: 0 }], ['timing', FULL], ['fee', FULL], ['spend', FULL]])
   })
   it('is deterministic', () => {
     expect(JSON.stringify(poltergeist(recordedWorld()))).toBe(JSON.stringify(r))
   })
-  it('the gap was not tuned: 30 s and 60 s agree, and 2 minutes or more swallows a stranger (the README says so)', () => {
+  it('the gap was not tuned: 30 s to an hour agree, because the one other transaction is in another epoch window (the README says so)', () => {
     expect(ties(world, 30_000).timing).toBe(11)
-    expect(poltergeist(world, 30_000).rows[2].tari).toEqual(FULL)
-    for (const gap of [120_000, 300_000]) expect(poltergeist(world, gap).rows[2].tari).toEqual({ tied: 11, of: 11, wrong: 11 })
+    for (const gap of [30_000, 120_000, 300_000, 3_600_000]) expect(poltergeist(world, gap).rows[2].tari).toEqual(FULL)
   })
 })
 
@@ -76,16 +75,20 @@ describe('the facts behind the numbers, from the raw replies', () => {
   const crowdTimes = sample.filter((t) => !ourIds.has(t.transaction_id)).map((t) => ms(all(t, 'created_at')[0]))
   const fees = (xs: unknown[]): number[] => xs.map((x) => Number(all(x, 'total_fees_paid')[0]))
 
-  it('timing: the demo is one chain of gaps under 20 s, 140 s end to end, and every other transaction is 2 minutes or more away', () => {
+  it('timing: the demo is one chain of gaps under 30 s, 135 s end to end, and the one other transaction is about half an hour away', () => {
     const t = [...demoTimes].sort((a, b) => a - b)
-    expect(Math.max(...t.slice(1).map((x, i) => x - t[i]))).toBeLessThan(20_000)
-    expect((t[t.length - 1] - t[0]) / 1000).toBe(140)
+    expect(Math.max(...t.slice(1).map((x, i) => x - t[i]))).toBeLessThan(30_000)
+    expect((t[t.length - 1] - t[0]) / 1000).toBe(135)
     const nearest = Math.min(...crowdTimes.flatMap((c) => t.map((d) => Math.abs(c - d))))
-    expect(nearest).toBeGreaterThanOrEqual(120_000)
-    expect(nearest).toBeLessThan(121_000) // ... which is why a 2 minute gap is the first to pull one in
+    expect(nearest).toBeGreaterThanOrEqual(1_700_000)
+    expect(nearest).toBeLessThan(1_800_000)
   })
-  it('timing: one epoch window for the demo (the others are different or far away)', () => {
-    expect(new Set(txs.map((t) => all(t.reply, 'max_epoch')[0])).size).toBe(1)
+  it('timing: one epoch window for the demo, and the other transaction is in an earlier one', () => {
+    const epoch = new Set(txs.map((t) => all(t.reply, 'max_epoch')[0]))
+    expect(epoch.size).toBe(1)
+    const others = sample.filter((t) => !ourIds.has(t.transaction_id)).map((t) => all(t, 'max_epoch')[0] as number)
+    expect(others).toHaveLength(1)
+    expect(others[0]).toBeLessThan([...epoch][0] as number)
   })
   it('fee: every payment paid 100000 and none of the others did', () => {
     expect(new Set(fees(txs.map((t) => t.reply)))).toEqual(new Set([100000]))
@@ -256,8 +259,8 @@ describe('the words on the page', () => {
     expect(n.reuse).toMatch(/No key signs two payments and no key is paid twice/)
     expect(n.amount).toMatch(/One payment paid out in the open/)
     expect(n.amount).toMatch(/The other 10 are sealed/)
-    expect(n.timing).toMatch(/all 11 within 140 seconds, in one epoch window/)
-    expect(n.timing).toMatch(/None of the 9 other transactions/)
+    expect(n.timing).toMatch(/all 11 within 135 seconds, in one epoch window/)
+    expect(n.timing).toMatch(/Of the 1 other transaction recorded, none was close enough in time/)
     expect(n.fee).toMatch(/exactly 0\.1 tTARI/)
     expect(n.spend).toMatch(/Spent notes/)
     for (const text of Object.values(n)) expect(text).not.toMatch(/\b(avoid|mitigat|prevent|fix|solve|protect|hide it)/i)

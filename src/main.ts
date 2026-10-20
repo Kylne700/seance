@@ -116,6 +116,7 @@ function checkRadio(group: 'key' | 'audit-key', value: string | null): void {
 function describe(s: Shown): string {
   const what = `Showing transaction ${short(s.view.id, 8)} (${outcomeLabel(s.view)}).`
   if (s.ours) return `Nobody else's private transfer was among the latest transactions, so this is one of the demos we made for this page. ${what}`
+  if (s.forgotten) return `The indexer no longer holds this transaction, so the page switched to recorded data. ${what}`
   if (s.fellBack) return `The indexer did not answer, so the page switched to recorded data. ${what}`
   if (s.quietChain) return `The latest live transactions held no private transfer, so this one is recorded. ${what}`
   if (demos.find((d) => d.id === s.view.id)?.kind === 'audited') return `${what} Paid in the demo token SEANCE, which has an audit key. The Medium, with the recipient's key, opens one note (amount and memo). The Auditor, with the audit key, counts the amount of both and cannot read a memo.`

@@ -1,8 +1,7 @@
 // Do the explorer links resolve? Opens https://explorer.tari.mw/tx/<id> (built with the same function the page uses) in headless
 // Chromium for every demo transaction, and checks that the page shows that very id and its outcome. A made-up id is the negative
 // control: the check must fail for it. The two footer links are fetched too. Writes evidence/explorer-links.txt.
-// Every transaction the README links to is checked: the 11 demo payments, the 4 Auditor transfers, the Auditor set-up steps that ran, and
-// the 4 earlier Auditor tests. (The first, rejected try of the token never ran, so it has no explorer page to check.)
+// Every transaction the README links to is checked: the 11 demo payments, the 4 Auditor transfers and the Auditor set-up steps.
 // Usage: node scripts/links.mjs          (needs the network; one page at a time, 1.5 s apart)
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -40,7 +39,7 @@ async function look(id) {
 
 say(`Explorer links, checked ${new Date().toISOString()} against ${EXPLORER_URL}`)
 try {
-  const linked = [...ledger.txs, ...ledger.hero, ...ledger.setup.filter((t) => t.outcome !== null), ...ledger.earlier.filter((t) => t.note.startsWith('Auditor test'))]
+  const linked = [...ledger.txs, ...ledger.hero, ...ledger.setup]
   for (const tx of linked) {
     const r = await look(tx.id)
     const ok = r.http === 200 && r.hasId && r.commit

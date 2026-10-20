@@ -8,7 +8,7 @@
 //
 // Why the shield step: a transfer paid from a PUBLIC balance writes its amount in the open ("revealed_amount"), and the sealed
 // note then proves nothing. So the amount is first moved, all of it at once, into a sealed note; every hero transfer spends that
-// note (or the change it leaves) and shows no amount in the open. A first try without this step is kept in ledger.earlier.
+// note (or the change it leaves) and shows no amount in the open. A first try without this step (2026-10-18) is only in git history.
 //
 // The auditor SECRET is written into ledger.json on purpose, like the demo view secrets: it opens the amounts of the hero transfers
 // and of nothing else (it cannot spend, and it cannot read a memo). Never reuse it. WD_URL=http://127.0.0.1:5100/json_rpc WD_ACCOUNT=spike

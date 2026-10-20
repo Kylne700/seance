@@ -768,6 +768,24 @@ async function hangRun(browser) {
   await page.close()
 }
 
+// The indexer is up but no longer holds a demo (its history was dropped, or the testnet was reset): the page must say that, not "did not answer".
+async function forgottenRun(browser) {
+  const tag = 'auto-fallback (indexer answers 404 for a demo)'
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }
+  const intercept = (r) => {
+    if (new URL(r.url()).host !== INDEXER_HOST) void r.continue()
+    else if (r.method() === 'OPTIONS') void r.respond({ status: 204, headers: cors })
+    else void r.respond({ status: 404, headers: cors, contentType: 'application/json', body: JSON.stringify({ error: `Transaction ${tx(2).id} is not known to this indexer` }) })
+  }
+  const { page, log } = await open(browser, { w: 1280, url: `${BASE}#tx=${tx(2).id}`, intercept })
+  await settled(page)
+  const s = await snap(page)
+  check(s.badge === 'Recorded' && /^The indexer no longer holds this transaction, so the page switched to recorded data\./.test(s.status) && /warn/.test(s.statusClass), `${tag}: the page says the indexer no longer holds it, not that it did not answer`, s.status.slice(0, 90))
+  check(s.shownId === tx(2).id && /^Recorded:/.test(s.source ?? ''), `${tag}: the id from the address still shows, marked "Recorded"`)
+  check(log.pageErrors.length === 0, `${tag}: no page error`, log.pageErrors.join(' | '))
+  await page.close()
+}
+
 // ---------- a link with the id in capitals ----------
 async function hashRun(browser) {
   const tag = 'uppercase #tx= link'
@@ -1078,6 +1096,7 @@ try {
   section('the indexer goes away')
   for (const w of [1280, 390]) await scenario(`fallback ${w}`, () => fallbackRun(offline, w))
   await scenario('hang', () => hangRun(online))
+  await scenario('forgotten', () => forgottenRun(online))
   await scenario('uppercase link', () => hashRun(offline))
   await scenario('loading', () => loadingRun(offline))
   section('keyboard, reduced motion, a slow phone, policy')

@@ -30,7 +30,7 @@ describe('the hero set', () => {
     expect(heroes.length).toBe(4)
     expect(SEANCE_RESOURCE).toBe(ledger.auditor.resource)
     expect(demos.filter((d) => d.kind === 'audited').map((d) => d.id)).toEqual(heroes.map((t) => t.id))
-    for (const t of [...heroes, ...(ledger.setup as { id: string }[]), ...(ledger.earlier as { id: string }[])]) expect(ourIds.has(t.id), t.id).toBe(true)
+    for (const t of [...heroes, ...(ledger.setup as { id: string }[])]) expect(ourIds.has(t.id), t.id).toBe(true)
   })
 
   it('each one is a single private transfer that spends one sealed note, makes two, and opens no amount in the public', () => {

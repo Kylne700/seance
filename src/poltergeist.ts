@@ -171,7 +171,7 @@ const verb = (id: TrickId, s: Score): string => `${id === 'amount' ? 'finds' : '
 export function notes(r: Report): Record<TrickId, string> {
   const t = Object.fromEntries(r.rows.map((x) => [x.id, x.tari])) as Record<TrickId, Score>
   const n = r.of
-  const others = (s: Score, none: string): string => (s.wrong === 0 ? `None of the ${r.crowd} other transactions ${none}.` : `${s.wrong} of the ${n} ended up in a group with someone else's transaction.`)
+  const others = (s: Score, none: string): string => (s.wrong === 0 ? `Of the ${r.crowd} other transaction${r.crowd === 1 ? '' : 's'} recorded, none ${none}.` : `${s.wrong} of the ${n} ended up in a group with someone else's transaction.`)
   const open = t.amount.tied
   return {
     reuse:

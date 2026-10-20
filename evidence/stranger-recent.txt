@@ -1,5 +1,5 @@
-Stranger lens, 3 transaction(s) from https://ootle-indexer-a.tari.com at 2026-10-18T17:21:26.305Z
-7f205f7dc89ee1f06f13f861a5c2fcb96c92b2415f0f3271d25ed73b719a661c
+Stranger lens, 3 transaction(s) from https://ootle-indexer-a.tari.com at 2026-10-20T21:06:37.107Z
+d0c00cd2eb66433594b3be65776f8b09eb31d6c82b46d76d4879b10ec5326780
   ok   the answer is for the id asked
   ok   outcome is public: Commit
   ok   fee is public: 30000 uT
@@ -10,7 +10,7 @@ Stranger lens, 3 transaction(s) from https://ootle-indexer-a.tari.com at 2026-10
   ok   the recent list and the by-id answer agree
   ok   a key that fits nothing hears nothing from any note
        notes: 335B/Key 80B/Key  instructions: StealthTransfer, PutLastInstructionOutputOnWorkspace, PayFeeFromBucket
-357d8c42dfe0a984086ca6a6f2b07c0135f1ad072f20156bfa8bcddb655297b4
+b3db5166b13c827526d575a05803324206f34d43512d1dea3d87f8564183152b
   ok   the answer is for the id asked
   ok   outcome is public: Commit
   ok   fee is public: 30000 uT
@@ -21,7 +21,7 @@ Stranger lens, 3 transaction(s) from https://ootle-indexer-a.tari.com at 2026-10
   ok   the recent list and the by-id answer agree
   ok   a key that fits nothing hears nothing from any note
        notes: 335B/Key 80B/Key  instructions: StealthTransfer, PutLastInstructionOutputOnWorkspace, PayFeeFromBucket
-ec71ff7a36f591b7982c6874706895dabd87358ca4b9133cad833229c4c16031
+571724b644ed8c4b9efee6a528fa867a388fc68e87066c92809f2b8ae10f9ba8
   ok   the answer is for the id asked
   ok   outcome is public: Commit
   ok   fee is public: 100000 uT
