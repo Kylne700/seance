@@ -1,4 +1,4 @@
-Links and recorded copies, checked 2026-10-24T17:51:35.871Z
+Links and recorded copies, checked 2026-10-24T18:10:24.648Z
 first indexer https://ootle-indexer-a.tari.com, second indexer https://ootle-indexer-b.tari.com, explorer https://explorer.tari.mw
 ok   e99ccae24789ef34dbba783c9675f90f89757043a5f456b6d521df6df60ae15b  first indexer 404  second indexer 200  shows the id with outcome Commit: true  equals the recording
 ok   e04e6e78021a71bdfa6902674a5401fb64efb54ce948c5c4e5fc287cf6074a7f  first indexer 404  second indexer 200  shows the id with outcome Commit: true  equals the recording
@@ -19,6 +19,9 @@ ok   52396cf13c732ba72e6b248462d980dc392795c7e0c115b1cb0203248e468193  first ind
 ok   6602b7b2a5d84e5ca2ac4cfb38699efe1ae73d183eec943794fd484d47ddf9f8  first indexer 404  second indexer 200  shows the id with outcome Commit: true  no recorded answer
 ok   3b12856d3f83792977244e795fb53a49d6a26ce09591a92aab42defe4f140f33  first indexer 404  second indexer 200  shows the id with outcome Commit: true  no recorded answer
 first indexer still holds 0 of 18 (404 for the rest: the page then shows the saved copy; not a failure); 15 of 15 recorded answers equal the second indexer's, source field aside
+ok   7976fa08de0acfda6f8e94fecb844e77b1a16404acf4a121732f0dab2498f503  first indexer 404  second indexer 200  shows the id with outcome Commit: true  equals the recording
+ok   3d1ef4e5bcc6e27963d6f11a73604f03df15c7e06fa74b510953f4798f0848f0  first indexer 404  second indexer 200  shows the id with outcome Commit: true  equals the recording
+recorded sample (Summon's fallback, saved 2026-10-20): first indexer still holds 0 of 2; 2 of 2 recorded answers equal the second indexer's, source field aside
 ok   negative control abababababab...  second indexer 404 (must be 404)
 ok   first indexer: template e2094ebe40...  http 200  name SeanceAuditorToken  code 123243 bytes
 ok   first indexer: token resource_469b4ea86...  http 200  its view key is the audit key (public half): true

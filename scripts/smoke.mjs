@@ -1,17 +1,20 @@
 // Browser smoke test of the PRODUCTION build (dist/), served under /seance/ to prove the relative base path works.
-// It walks the judge path (10 s step: summon a transaction or paste an id; 60 s step: hold the seance, wrong key, own key)
-// and the newer parts (the "what still leaks" panel, the Poltergeist, the Auditor with its audit key, which must never freeze the
-// page), live and in recorded ("fixture") mode, at 1280 and 390 px, and checks layout, tap targets, focus rings, keyboard use,
-// reduced motion, contrast, axe and the CSP. Writes evidence/smoke.txt and screenshots evidence/seance-*.png.
+// It starts at the first screen (a saved example, already read by the three ghosts, nothing asked of the indexer), then walks the judge path
+// (10 s step: summon a transaction or paste an id; 60 s step: hold the seance, wrong key, own key) and the newer parts (the "what still
+// leaks" panel, the Poltergeist, the Auditor with its audit key, which must never freeze the page, the card that shows the token's
+// template), live and in recorded ("fixture") mode, at 1280 and 375 px, and checks layout, tap targets, focus rings, keyboard use,
+// reduced motion, contrast, axe and the CSP. The public indexer has dropped the demo transactions, so the live walk meets "404, saved copy"
+// for them; a mocked indexer (forgottenRun) checks the same on purpose, with one demo it still holds beside the ones it dropped.
+// Writes evidence/smoke.txt and screenshots evidence/seance-*.png.
 //   npm run build && node scripts/smoke.mjs        (headless; no screen is used)
-// The live parts call the real indexer about a dozen times in total. The recorded parts run in a browser where every outside
+// The live parts call the real indexer about two dozen times in total. The recorded parts run in a browser where every outside
 // host fails to resolve, so any request the page tried to make would show up as a failure.
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import puppeteer from 'puppeteer-core'
-import { EXPLORER_URL, INDEXER_URL, explorerTx } from '../src/config.ts'
+import { EXPLORER_URL, INDEXER_URL, LEDGER_URL, MIRROR_URL, explorerTx, mirrorTx } from '../src/config.ts'
 import { amountOf, tari } from '../src/format.ts'
 import { serveDir } from './serve.mjs'
 
@@ -37,10 +40,16 @@ const QUIET = 'The spirits are quiet.'
 const NO_KEY = 'Hand the medium a key and it will listen.'
 const NO_LEAKS = 'Nothing to inspect yet. Call up a transaction above.'
 const AUDIT_NO_TX = 'The auditor waits for a transaction. Call one up above.'
-const AUDIT_NO_KEY = 'Hand the auditor a key and it will count.'
 const AUDIT_NO_PROOF = 'Nothing to count. This token has no audit key'
 const SHUT = 'Memo: shut. The audit key cannot open it.'
 const LEAK_IDS = ['token', 'audit', 'spent', 'created', 'revealed', 'rule', 'times', 'epochs', 'fee', 'length']
+// What the page says about where an answer came from. The day is the one on which the recordings were taken (src/data.ts reads it from ledger.json too).
+const SAVED_ON = ledger.recent.capturedAt.slice(0, 10)
+const EXAMPLE_SOURCE = `Recorded: the page's starting example, a copy saved on ${SAVED_ON}. Nothing was asked of the indexer.`
+const FORGOTTEN_SOURCE = `Recorded: the public indexer no longer holds this transaction, so this is the copy saved on ${SAVED_ON}.`
+const NOT_FOUND = 'The indexer does not know this transaction id on Esmeralda. The public indexer drops old history, so an old id may be gone.'
+const TEMPLATE_URL = 'https://github.com/Kylne700/seance/blob/main/template/src/lib.rs'
+const TEMPLATE_LINES = readFileSync(join(APP, 'template/src/lib.rs'), 'utf8').trimEnd().split('\n').length
 // The Poltergeist's numbers, out of the 11 demo payments: [trick, the transparent ledger (synthetic), Tari (recorded, real)]. The same table as test/poltergeist.test.ts.
 const POLT = [['reuse', '11 of 11', '0 of 11'], ['amount', '11 of 11', '1 of 11'], ['timing', '11 of 11', '11 of 11'], ['fee', '11 of 11', '11 of 11'], ['spend', 'Not applicable', '11 of 11']]
 
@@ -75,9 +84,7 @@ function snapshot() {
     ownHint: $('#own-hint').textContent,
     source: body.querySelector('.source')?.textContent ?? null,
     shownId: body.querySelector('.fact code.hex')?.textContent ?? null,
-    explorerHref: body.querySelector('.actions a')?.href ?? null,
-    explorerRel: body.querySelector('.actions a')?.rel ?? null,
-    explorerTarget: body.querySelector('.actions a')?.target ?? null,
+    strangerLinks: [...body.querySelectorAll('.actions a')].map((a) => ({ href: a.href, text: a.textContent, rel: a.rel, target: a.target })),
     mediumHref: $('#medium-actions a')?.href ?? null,
     mediumRel: $('#medium-actions a')?.rel ?? null,
     mediumTarget: $('#medium-actions a')?.target ?? null,
@@ -86,7 +93,8 @@ function snapshot() {
     notesOpen: body.querySelectorAll('details.note[open]').length,
     strangerEmpty: body.querySelector('.empty')?.textContent ?? null,
     strangerText: $('#stranger').innerText,
-    strangerBody: [...body.children].filter((c) => !c.classList.contains('source')).map((c) => c.innerText).join('\n'),
+    // what the transaction is, not where it came from: without the source line and the links, which differ between a live answer and a saved copy
+    strangerBody: [...body.children].filter((c) => !c.classList.contains('source') && !c.classList.contains('actions')).map((c) => c.innerText).join('\n'),
     strangerTop: Math.round($('#stranger').getBoundingClientRect().top),
     checkedKey: $('input[name=key]:checked')?.value ?? null,
     quiet: $('#reading .quiet')?.textContent ?? null,
@@ -117,10 +125,15 @@ function layoutProbe() {
     return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'
   }
   const name = (el) => el.tagName.toLowerCase() + (el.id ? `#${el.id}` : '') + (typeof el.className === 'string' && el.className.trim() ? `.${el.className.trim().split(/\s+/).join('.')}` : '')
+  // the code of the template scrolls sideways inside its own box (by design, and by keyboard): what sits inside such a box may run past the screen, the box may not
+  const scrolled = (el) => {
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) if (/auto|scroll/.test(getComputedStyle(p).overflowX)) return true
+    return false
+  }
   for (const el of document.body.querySelectorAll('*')) {
     if (el.closest('.sr-only, .skip') || !shown(el)) continue
     const r = el.getBoundingClientRect()
-    if (r.right > vw + 1 || r.left < -1) out.over.push(`${name(el)} ${Math.round(r.left)}..${Math.round(r.right)}`)
+    if ((r.right > vw + 1 || r.left < -1) && !scrolled(el)) out.over.push(`${name(el)} ${Math.round(r.left)}..${Math.round(r.right)}`)
     const cs = getComputedStyle(el)
     // a text field scrolls its content by design (a 64-character id in a narrow field is not clipped text), so inputs are skipped
     if (el.tagName !== 'INPUT' && (cs.overflowX === 'hidden' || cs.overflowX === 'clip') && el.scrollWidth > el.clientWidth + 1) out.clipped.push(`${name(el)} ${el.scrollWidth}>${el.clientWidth}`)
@@ -260,8 +273,13 @@ async function open(browser, { w, h = 800, url = BASE, reduce = false, intercept
   }
   await page.goto(url, { waitUntil: 'load' })
   await until(page, () => document.querySelectorAll('#demo option').length > 0, undefined, 20000) // the app has started (wasm included)
+  // The page draws its first answer by itself (a saved example, or the transaction named in the address) and ignores a click while it does. Wait for it,
+  // and for the Auditor's count of the example, so that every scenario starts from a page that has nothing left to do.
+  await settled(page)
+  if (!new URL(url).hash) await exampleCounted(page)
   return { page, log }
 }
+const exampleCounted = (page) => until(page, () => document.querySelector('#audit-reading .reading') && !document.querySelector('#audit-reading .counting'), undefined, 60000)
 
 let axeSource = null
 async function axe(page, label) {
@@ -311,11 +329,14 @@ async function tabThrough(page, label) {
   }
   const bad = stops.filter((s) => s.style !== 'solid' || s.width < 2 || !s.onScreen || s.color !== 'rgb(255, 224, 138)')
   check(stops.length >= 10 && bad.length === 0, `${label}: all ${stops.length} Tab stops show the yellow 3 px outline and are on screen`, bad.map((s) => `${s.name} ${s.style} ${s.width} ${s.color} ${s.onScreen}`).join('; '))
-  // each name is searched for after the previous one, so the two "Open in the explorer" links (Stranger, then Medium) are told apart
-  const order = ['a "Skip', 'input#txid', 'button#look', 'button#summon', 'select#demo', 'button#hold', 'button#mode-switch', 'a "Open in the explorer', 'input[key=', 'input#own-key', 'a "Open in the explorer', 'input[audit-key=', 'a "Tari Ootle explorer', 'a "Tari Ootle docs']
+  // each name is searched for after the previous one, so the Stranger's link and the Medium's link (the same words) are told apart.
+  // The links follow where the answer came from: live, the explorer; a saved copy, the second indexer's raw answer, then the saved ledger (only the first goes to the Medium).
+  const copy = await page.evaluate(() => /^Recorded:/.test(document.querySelector('#stranger-body .source')?.textContent ?? ''))
+  const first = copy ? 'a "Raw answer' : 'a "Open in the explorer'
+  const order = ['a "Skip', 'input#txid', 'button#look', 'button#summon', 'select#demo', 'button#hold', 'button#mode-switch', first, ...(copy ? ['a "The saved copy'] : []), 'input[key=', 'input#own-key', first, 'input[audit-key=', 'summary "How this token was made', 'a "Tari Ootle explorer', 'a "Tari Ootle docs']
   let prev = -1
   const at = order.map((o) => (prev = stops.findIndex((s, k) => k > prev && s.name.startsWith(o))))
-  check(at.every((i, k) => i >= 0 && (k === 0 || i > at[k - 1])), `${label}: Tab order follows the page: skip link, id field, buttons, mode switch, Stranger's explorer link, keys, own key, Medium's explorer link, the Auditor's keys, footer`, order.map((o, k) => `${o}=${at[k]}`).join(' '))
+  check(at.every((i, k) => i >= 0 && (k === 0 || i > at[k - 1])), `${label}: Tab order follows the page: skip link, id field, buttons, mode switch, Stranger's proof links, keys, own key, Medium's proof link, the Auditor's keys, the template card, footer`, order.map((o, k) => `${o}=${at[k]}`).join(' '))
   return stops
 }
 
@@ -323,6 +344,53 @@ function expectHeard(s, t, keyName, label) {
   const want = t.expected.outputs.filter((o) => o.reader === keyName).map((o) => ({ amount: money(t, o.value), memo: o.memo ? `“${o.memo}”` : 'No memo' }))
   if (want.length === 0) check(s.quiet === QUIET && s.readings.length === 0, `${label}: silence ("${QUIET}"), no amount shown`, s.quiet ? '' : s.readingText.slice(0, 80))
   else check(s.quiet === null && JSON.stringify(s.readings) === JSON.stringify(want), `${label}: reads ${want.map((w) => `${w.amount} ${w.memo}`).join(' + ')}`, JSON.stringify(s.readings))
+}
+
+// The links beside an answer follow where it came from: a live answer gets the explorer (it reads the same indexer), a saved copy gets the second
+// public indexer's raw answer and the saved ledger, and never a button to a page that is empty. They all open in a new tab, safely.
+function checkLinks(s, id, label) {
+  const copy = /^Recorded:/.test(s.source ?? '')
+  const want = copy ? [mirrorTx(id), LEDGER_URL] : [explorerTx(id)]
+  const hrefs = s.strangerLinks.map((a) => a.href)
+  check(s.shownId === id && JSON.stringify(hrefs) === JSON.stringify(want) && s.strangerLinks.every((a) => a.target === '_blank' && /noopener/.test(a.rel)), `${label}: the Stranger's links fit ${copy ? 'a saved copy (the second indexer\'s raw answer, ledger.json)' : 'a live answer (the explorer)'} for this very id and open safely`, hrefs.join(' | '))
+  check(s.mediumHref === want[0] && s.mediumTarget === '_blank' && /noopener/.test(s.mediumRel ?? '') && (copy ? /^Raw answer from a second public indexer/ : /^Open in the explorer/).test(s.mediumLink ?? ''), `${label}: the Medium card has its own link for the same id`, `${s.mediumLink} ${s.mediumHref}`)
+}
+
+// The card that shows how the demo token was made: the template's real lines, two links, and the same keyboard and layout rules as the rest of the page.
+async function templateChecks(page, tag, { wide, w, mode }) {
+  const read = () =>
+    page.evaluate(() => {
+      const d = document.querySelector('details.maker')
+      const links = [...d.querySelectorAll('a')]
+      return { open: d.open, summary: d.querySelector('summary').textContent, text: d.querySelector('pre.code code').textContent, hrefs: links.map((a) => a.href), safe: links.every((a) => a.target === '_blank' && /noopener/.test(a.rel)), pre: { tabindex: d.querySelector('pre.code').getAttribute('tabindex'), name: d.querySelector('pre.code').getAttribute('aria-label') } }
+    })
+  let t = await read()
+  const file = readFileSync(join(APP, 'template/src/lib.rs'), 'utf8')
+  check(!t.open && t.summary === `How this token was made: ${TEMPLATE_LINES} lines of Rust`, `${tag}: the template card is closed and its title counts the real lines of the file (${TEMPLATE_LINES})`, t.summary)
+  check(t.text.trimEnd() === file.trimEnd() && t.text.includes('.with_view_key(auditor)'), `${tag}: the card shows template/src/lib.rs word for word, including the line that names the audit key`, `${t.text.trimEnd().split('\n').length} lines`)
+  check(JSON.stringify(t.hrefs) === JSON.stringify([TEMPLATE_URL, `${EXPLORER_URL}/substate/${ledger.auditor.resource}`]) && t.safe, `${tag}: its two links are the file on GitHub and the demo token's page on the explorer, and open safely`, t.hrefs.join(' | '))
+  check(t.pre.tabindex === '0' && !!t.pre.name, `${tag}: the code can be scrolled by keyboard and has a name for screen readers`, JSON.stringify(t.pre))
+  await page.evaluate(() => {
+    document.querySelector('details.maker').open = true
+  })
+  t = await read()
+  check(t.open, `${tag}: the card opens`)
+  await layout(page, `${tag} with the template card opened`, { wide })
+  await axe(page, `${tag} with the template card opened`)
+  await shotEl(page, 'article.auditor', `seance-${w}-${mode}-template.png`)
+  // keyboard: from the title, Tab reaches the code, then the two links, each with the yellow outline
+  await page.evaluate(() => {
+    window.__seen = new WeakSet()
+  })
+  await page.focus('details.maker summary')
+  const stops = []
+  for (let i = 0; i < 3; i++) {
+    await page.keyboard.press('Tab')
+    stops.push(await page.evaluate(focusProbe))
+  }
+  const bad = stops.filter((s) => s.style !== 'solid' || s.width < 2 || !s.onScreen || s.color !== 'rgb(255, 224, 138)')
+  const names = stops.map((s) => s.name ?? '')
+  check(names[0] === 'pre' && names[1].startsWith('a "The file on GitHub') && names[2].startsWith('a#token-link "The token on the explor') && bad.length === 0, `${tag}: Tab goes from the title to the code and the two links, each with the yellow 3 px outline and on screen`, stops.map((s) => `${s.name} ${s.style} ${s.width} ${s.onScreen}`).join('; '))
 }
 
 // ---------- the judge path ----------
@@ -338,7 +406,15 @@ async function walk(browser, { mode, w }) {
   const inView = (x) => (wide ? x.strangerTop >= 0 && x.strangerTop <= H / 2 : Math.abs(x.strangerTop) <= 24)
   let s = await snap(page)
   check(externalHosts(log).length === 0 && log.requests.every((r) => new URL(r.url).pathname.startsWith('/seance/')), `${tag}: loading the page asks nobody but its own server (all paths under /seance/)`, `${log.requests.length} requests`)
-  check(s.badge === 'Live' && s.pressed === 'false' && s.strangerEmpty?.startsWith('Nothing on the table') && s.empty === 'The medium waits for a transaction. Call one up above.', `${tag}: first view is the empty seance in live mode`)
+  // The first screen is never empty: demo 1 from the recording, read by the three ghosts with the keys already in hand. Nothing was asked of the indexer.
+  const ex = hero(1)
+  check(s.badge === 'Live' && s.pressed === 'false' && s.shownId === ex.id && s.hash === '' && s.txid === '', `${tag}: first view: the page is live and already shows a saved example (demo ${demoNo(ex)}), and leaves the address bar and the id field alone`, `${s.badge} ${s.pressed} ${String(s.shownId).slice(0, 12)} "${s.hash}" "${s.txid}"`)
+  check(s.source === EXAMPLE_SOURCE && /^A saved example is on the table/.test(s.status) && /Nothing has been asked of the indexer yet/.test(s.status) && /info/.test(s.statusClass), `${tag}: first view: the Stranger and the status line both say it is a saved example and that the indexer has not been asked`, `${s.source} | ${s.status.slice(0, 60)}`)
+  checkLinks(s, ex.id, `${tag}: first view`)
+  check(s.checkedKey === ex.to && s.auditChecked === 'auditor' && s.empty === null && s.auditEmpty === null && s.leaksEmpty === null && s.strangerEmpty === null, `${tag}: first view: ${ex.to}'s key and the audit key are already in hand, and no card is waiting`, `${s.checkedKey} ${s.auditChecked} ${s.empty} | ${s.auditEmpty} | ${s.leaksEmpty}`)
+  expectHeard(s, ex, ex.to, `${tag}: first view: ${ex.to}'s key opens ${ex.to}'s note of the example`)
+  auditReads(s, ex, `${tag}: first view: the audit key counts the example`)
+  leaksChecks(s, ex, `${tag}: first view`)
   check(
     await page.evaluate(() => {
       const n = (q) => document.querySelectorAll(q).length
@@ -346,7 +422,6 @@ async function walk(browser, { mode, w }) {
     }),
     `${tag}: 15 demos (4 with an audit key, 11 without), 4 keys to hand the Medium and 4 for the Auditor, the Auditor card is no longer "Coming next"`,
   )
-  check(s.auditEmpty === AUDIT_NO_TX && s.leaksEmpty === NO_LEAKS, `${tag}: before any transaction the Auditor waits and the leaks panel has nothing to inspect`, `${s.auditEmpty} | ${s.leaksEmpty}`)
   poltergeistChecks(s, tag)
   if (live) liveBodies.set(`${w}:polt`, s.poltText)
   else if (liveBodies.has(`${w}:polt`)) check(liveBodies.get(`${w}:polt`) === s.poltText, `${tag}: the Poltergeist's text is word for word the same as in the live run (it reads recorded data only)`)
@@ -375,13 +450,16 @@ async function walk(browser, { mode, w }) {
   check(isHex64(s.shownId) && s.txid === s.shownId && s.hash === `#tx=${s.shownId}`, `${tag}: "Summon" shows a transaction id (${s.shownId?.slice(0, 10)}...), in the id field and the address`)
   check(live ? /^Live:/.test(s.source ?? '') || quiet : /^Recorded:/.test(s.source ?? ''), `${tag}: the Stranger says where the data came from`, `${s.source}${quiet ? ' (quiet chain)' : ''}`)
   check(ms < 10000, `${tag}: the 10 s step took ${ms} ms`)
-  check(s.explorerHref === explorerTx(s.shownId) && s.explorerTarget === '_blank' && /noopener/.test(s.explorerRel ?? ''), `${tag}: the explorer link points at this very id and opens safely`)
-  check(s.mediumHref === explorerTx(s.shownId) && s.mediumTarget === '_blank' && /noopener/.test(s.mediumRel ?? '') && /^Open in the explorer/.test(s.mediumLink ?? ''), `${tag}: the Medium card has its own explorer link for the same id`)
+  checkLinks(s, s.shownId, `${tag}: after "Summon"`)
   if (live && !quiet) check(!OURS.has(s.shownId) || /one of the demos we made/.test(s.status), `${tag}: Summon shows a stranger's transaction, or says it is one of ours`, `${OURS.has(s.shownId) ? 'ours' : 'stranger'}`)
   if (!live) check(!OURS.has(s.shownId) && !/one of the demos we made/.test(s.status), `${tag}: Summon from the recorded sample never serves one of ours`)
   check(s.notes >= 1 && s.notesOpen === (wide ? s.notes : 0), `${tag}: sealed notes are ${wide ? 'open' : 'closed'} by default (${s.notes})`)
-  check(s.empty === NO_KEY, `${tag}: with no key chosen the Medium waits ("${NO_KEY}")`)
-  check(s.auditEmpty === AUDIT_NO_KEY || s.auditEmpty?.startsWith(AUDIT_NO_PROOF), `${tag}: the Auditor has nothing to count yet: no key chosen, or no audit proof on this transaction`, s.auditEmpty ?? '')
+  // The keys from the first screen are still in hand (Bob's, and the audit key): a stranger's transaction is not Bob's, so the Medium hears nothing, and the Auditor has no proof to count.
+  // A summoned transaction of ours (the live chain held nobody else's) may be read, so only a stranger's is held to this.
+  if (!OURS.has(s.shownId)) {
+    check(s.checkedKey === ex.to && s.empty === null && s.quiet === QUIET && s.readings.length === 0, `${tag}: ${ex.to}'s key, still in hand from the first screen, hears nothing in a stranger's transaction ("${QUIET}")`, `${s.checkedKey} | ${s.quiet} | ${s.empty}`)
+    check(s.auditEmpty?.startsWith(AUDIT_NO_PROOF) || s.auditQuiet === QUIET, `${tag}: the Auditor has nothing to count in it: no audit proof on this transaction, or a proof that is not for this key`, s.auditEmpty ?? s.auditQuiet ?? '')
+  }
   check(s.leaks.map((l) => l.id).join() === LEAK_IDS.join() && s.leaksEmpty === null, `${tag}: the leaks panel lists what this transaction leaves public`, s.leaks.map((l) => l.id).join())
   check(inView(s), `${tag}: the answer is on screen without scrolling by hand: the Stranger card ${wide ? 'starts in the upper half' : 'was scrolled to the top'}`, `top ${s.strangerTop}px of ${H}px, scrollY ${s.scrollY}`)
 
@@ -391,7 +469,8 @@ async function walk(browser, { mode, w }) {
   await page.click('#look')
   await settled(page)
   s = await snap(page)
-  check(s.shownId === tx(3).id && s.explorerHref === explorerTx(tx(3).id), `${tag}: a pasted id shows that transaction, with its explorer link`)
+  check(s.shownId === tx(3).id && (live ? /^(Live:|Recorded: the public indexer no longer holds this transaction)/ : /^Recorded:/).test(s.source ?? ''), `${tag}: a pasted id shows that transaction (live: read from the indexer, or the saved copy if the indexer dropped it)`, s.source ?? '')
+  checkLinks(s, tx(3).id, `${tag}: a pasted id`)
 
   // 60 seconds: hold the seance on a demo
   await page.select('#demo', tx(1).id)
@@ -400,7 +479,8 @@ async function walk(browser, { mode, w }) {
   await settled(page)
   await scrollSettled(page)
   s = await snap(page)
-  check(s.shownId === tx(1).id && s.checkedKey === 'bob' && s.explorerHref === explorerTx(tx(1).id), `${tag}: "Hold the seance" shows demo ${demoNo(tx(1))}, picks Bob's key, links to the explorer`)
+  check(s.shownId === tx(1).id && s.checkedKey === 'bob', `${tag}: "Hold the seance" shows demo ${demoNo(tx(1))} and picks Bob's key`)
+  checkLinks(s, tx(1).id, `${tag}: demo ${demoNo(tx(1))}`)
   expectHeard(s, tx(1), 'bob', `${tag}: Bob's key on demo ${demoNo(tx(1))}`)
   leaksChecks(s, tx(1), `${tag} demo ${demoNo(tx(1))}`)
   check(s.auditEmpty?.startsWith(AUDIT_NO_PROOF) && s.auditReadings.length === 0, `${tag}: a demo without an audit key leaves the Auditor nothing to count, and it says why`, s.auditEmpty ?? '')
@@ -495,8 +575,11 @@ async function walk(browser, { mode, w }) {
   check(s.leaksEmpty === NO_LEAKS && s.auditEmpty === AUDIT_NO_TX && s.leaks.length === 0, `${tag}: after an error the leaks panel and the Auditor wait again, and show nothing from the earlier transaction`, `${s.leaksEmpty} | ${s.auditEmpty}`)
 
   // the judge path is done: nothing may have gone wrong in the console
-  const bad = consoleBad(log)
-  check(bad.length === 0 && log.pageErrors.length === 0, `${tag}: 0 console errors or warnings, 0 page errors over the whole walk`, bad.map((m) => m.text).concat(log.pageErrors).slice(0, 3).join(' | '))
+  // live: the browser itself notes each 404 the real indexer answers for a demo it dropped (the page handles it: saved copy); nothing else may appear
+  const own404 = (m) => live && m.type === 'error' && m.url.startsWith(INDEXER_URL) && /^Failed to load resource: the server responded with a status of 404/.test(m.text)
+  const bad = consoleBad(log).filter((m) => !own404(m))
+  const noted = consoleBad(log).length - bad.length
+  check(bad.length === 0 && log.pageErrors.length === 0, `${tag}: 0 console errors or warnings, 0 page errors over the whole walk${noted ? ` (the browser's own note for each of ${noted} indexer 404s aside)` : ''}`, bad.map((m) => m.text).concat(log.pageErrors).slice(0, 3).join(' | '))
   const hosts = externalHosts(log)
   if (live) check(hosts.every((h) => h === INDEXER_HOST), `${tag}: the only outside host contacted is the indexer`, hosts.join(', '))
   else check(hosts.length === 0 && log.failed.length === 0, `${tag}: no outside request was even attempted, none failed`, `${hosts.join(', ')} ${log.failed.slice(0, 2).join(' | ')}`)
@@ -528,6 +611,7 @@ async function walk(browser, { mode, w }) {
     await shot(page, `seance-${w}-${mode}-note-open.png`)
   }
   await tabThrough(page, `${tag}`)
+  await templateChecks(page, tag, { wide, w, mode })
   if (live) {
     // unknown id against the real indexer: must be a clean "not found", not a switch to recorded data
     const quietBefore = consoleBad(log).length
@@ -536,7 +620,7 @@ async function walk(browser, { mode, w }) {
     await page.click('#look')
     await settled(page)
     s = await snap(page)
-    check(s.status === 'The indexer does not know this transaction id on Esmeralda.' && /error/.test(s.statusClass) && s.badge === 'Live', `${tag}: an unknown id gives "not found" from the real indexer and the page stays live`, `${s.badge}: ${s.status}`)
+    check(s.status === NOT_FOUND && /error/.test(s.statusClass) && s.badge === 'Live', `${tag}: an unknown id gives "not found" from the real indexer, says why an old id may be gone, and the page stays live`, `${s.badge}: ${s.status}`)
     const extra = consoleBad(log).slice(quietBefore)
     check(extra.every((m) => /404/.test(m.text) && m.url.startsWith(INDEXER_URL)), `${tag}: the only console line it caused is the browser's own note about the indexer's 404`, extra.map((m) => m.text).join(' | ') || 'none')
     await page.$eval('#txid', (el) => el.select())
@@ -544,7 +628,7 @@ async function walk(browser, { mode, w }) {
     await page.click('#look')
     await settled(page)
     s = await snap(page)
-    check(s.shownId === tx(3).id && s.badge === 'Live' && /^Live:/.test(s.source), `${tag}: after "not found" the next lookup still works, live`)
+    check(s.shownId === tx(3).id && s.badge === 'Live' && /^(Live:|Recorded: the public indexer no longer holds this transaction)/.test(s.source ?? ''), `${tag}: after "not found" the next lookup still works, and the page is still live (the indexer's answer, or the saved copy if it dropped this one)`, s.source ?? '')
   }
   await page.close()
 }
@@ -596,8 +680,9 @@ async function auditorWalk(page, tag, { live, w, wide, which }) {
   let s = await counted(page)
   const took = Date.now() - t0
   const run = await traced(page)
-  check(s.shownId === t.id && s.checkedKey === 'bob' && s.auditChecked === 'auditor' && s.explorerHref === explorerTx(t.id), `${d}: "Hold the seance" hands Bob's key to the Medium and the audit key to the Auditor`)
-  check(/ Paid in the demo token SEANCE, which has an audit key\./.test(s.status) && (live ? /^Live:/ : /^Recorded:/).test(s.source ?? ''), `${d}: the status line says the token has an audit key; the Stranger says where the data came from`, `${s.source}`)
+  check(s.shownId === t.id && s.checkedKey === 'bob' && s.auditChecked === 'auditor', `${d}: "Hold the seance" hands Bob's key to the Medium and the audit key to the Auditor`)
+  checkLinks(s, t.id, d)
+  check(/ Paid in the demo token SEANCE, which has an audit key\./.test(s.status) && (live ? /^(Live:|Recorded: the public indexer no longer holds this transaction)/ : /^Recorded:/).test(s.source ?? ''), `${d}: the status line says the token has an audit key; the Stranger says where the data came from (live: the indexer, or the saved copy if it dropped this one)`, `${s.source}`)
   auditReads(s, t, `${d}: the audit key`)
   expectHeard(s, t, 'bob', `${d}: Bob's key`)
   leaksChecks(s, t, d)
@@ -662,9 +747,9 @@ async function auditorWalk(page, tag, { live, w, wide, which }) {
 
 // The same on a phone four times slower: the slices adapt to the speed, so the page still never freezes, only the count takes longer.
 async function slowRun(browser) {
-  const tag = 'auditor on a slow phone (390px, CPU 4x slower)'
+  const tag = 'auditor on a slow phone (375px, CPU 4x slower)'
   const t = hero(1)
-  const { page } = await open(browser, { w: 390 })
+  const { page } = await open(browser, { w: 375 })
   await page.click('#mode-switch')
   // control: a block of 120 ms that the page runs as a task of its own (a loop inside page.evaluate is not one and goes unreported), so "no long task" below proves something
   await page.evaluate(() => {
@@ -689,7 +774,7 @@ async function slowRun(browser) {
   await settled(page)
   await page.evaluate(() => document.getElementById('audit-reading').scrollIntoView({ block: 'center' }))
   await until(page, () => document.querySelector('#audit-reading progress.tally')?.value > 5000, undefined, 30000)
-  await page.screenshot({ path: join(EVID, 'seance-390-recorded-auditor-counting.png'), type: 'png' }) // mid-count
+  await page.screenshot({ path: join(EVID, 'seance-375-recorded-auditor-counting.png'), type: 'png' }) // mid-count
   const s = await counted(page, 120000)
   const first = await traced(page)
   auditReads(s, t, `${tag}: the audit key`)
@@ -768,21 +853,75 @@ async function hangRun(browser) {
   await page.close()
 }
 
-// The indexer is up but no longer holds a demo (its history was dropped, or the testnet was reset): the page must say that, not "did not answer".
-async function forgottenRun(browser) {
-  const tag = 'auto-fallback (indexer answers 404 for a demo)'
+// The indexer is up but no longer holds a demo (its history was dropped, or the testnet was reset). That one card must show the saved copy and say so, calmly;
+// the page stays live and asks the indexer again for the next id; a demo the indexer still holds is read live beside it; an id nobody holds still gets the
+// indexer's own "not found"; and the copy is a whole seance (the Medium reads it, the Auditor counts it). The mocked indexer answers 404 to everything but tx(3).
+async function forgottenRun(browser, w) {
+  const tag = `a demo the indexer forgot (${w}px)`
+  const wide = w >= 960
   const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*' }
+  const kept = tx(3) // the one demo this indexer still knows
+  const asked = []
   const intercept = (r) => {
-    if (new URL(r.url()).host !== INDEXER_HOST) void r.continue()
-    else if (r.method() === 'OPTIONS') void r.respond({ status: 204, headers: cors })
-    else void r.respond({ status: 404, headers: cors, contentType: 'application/json', body: JSON.stringify({ error: `Transaction ${tx(2).id} is not known to this indexer` }) })
+    const u = new URL(r.url())
+    if (u.host !== INDEXER_HOST) return void r.continue()
+    if (r.method() === 'OPTIONS') return void r.respond({ status: 204, headers: cors })
+    const id = u.pathname.split('/').pop()
+    asked.push(id)
+    if (id === kept.id) void r.respond({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(kept.reply) })
+    else void r.respond({ status: 404, headers: cors, contentType: 'application/json', body: JSON.stringify({ error: `Transaction ${id} is not known to this indexer` }) })
   }
-  const { page, log } = await open(browser, { w: 1280, url: `${BASE}#tx=${tx(2).id}`, intercept })
+  const { page, log } = await open(browser, { w, url: `${BASE}#tx=${tx(2).id}`, intercept })
+  let s = await snap(page)
+  check(asked.length === 1 && asked[0] === tx(2).id, `${tag}: the id in the address is asked of the indexer once`, asked.map((x) => x.slice(0, 8)).join())
+  check(s.badge === 'Live' && s.pressed === 'false', `${tag}: a 404 for one demo does not flip the page to recorded: the badge stays "Live"`, `${s.badge} ${s.pressed}`)
+  check(s.shownId === tx(2).id && s.source === FORGOTTEN_SOURCE, `${tag}: that card is the saved copy and says the public indexer no longer holds it, and which day the copy is from`, s.source ?? '')
+  check(/^The public indexer no longer holds this transaction, so this is the copy saved on /.test(s.status) && /Anything you paste still goes to the live indexer\./.test(s.status) && /info/.test(s.statusClass) && !/warn|error/.test(s.statusClass), `${tag}: the status line says the same, calmly (not a warning)`, s.status.slice(0, 100))
+  checkLinks(s, tx(2).id, tag)
+  check(!s.strangerLinks.some((a) => a.href.startsWith(`${EXPLORER_URL}/tx/`)) && s.mediumHref !== explorerTx(tx(2).id), `${tag}: no button to an explorer page that would be empty`)
+  await armReading(page)
+  await page.click(`input[name=key][value="${tx(2).to}"]`)
+  s = await heard(page)
+  expectHeard(s, tx(2), tx(2).to, `${tag}: the saved copy is a whole seance: ${tx(2).to}'s key reads demo ${demoNo(tx(2))}`)
+  await seeLenses(page)
+  await shot(page, `seance-${w}-forgotten.png`)
+  await layout(page, `${tag}`, { wide })
+  await axe(page, `${tag}`)
+
+  // the demo the indexer still holds is read live, on the same page
+  await page.select('#demo', kept.id)
+  await page.click('#hold')
   await settled(page)
-  const s = await snap(page)
-  check(s.badge === 'Recorded' && /^The indexer no longer holds this transaction, so the page switched to recorded data\./.test(s.status) && /warn/.test(s.statusClass), `${tag}: the page says the indexer no longer holds it, not that it did not answer`, s.status.slice(0, 90))
-  check(s.shownId === tx(2).id && /^Recorded:/.test(s.source ?? ''), `${tag}: the id from the address still shows, marked "Recorded"`)
-  check(log.pageErrors.length === 0, `${tag}: no page error`, log.pageErrors.join(' | '))
+  s = await snap(page)
+  check(asked.length === 2 && asked[1] === kept.id && s.shownId === kept.id && s.source === 'Live: read from the indexer just now.' && s.badge === 'Live', `${tag}: a demo the indexer still holds is read live, one request, right after the dropped one`, `${s.source} | ${asked.length} requests`)
+  checkLinks(s, kept.id, `${tag}: the demo it still holds`)
+  // and asked again every time: a dropped demo is not remembered as dropped
+  await page.select('#demo', tx(2).id)
+  await page.click('#hold')
+  await settled(page)
+  s = await snap(page)
+  check(asked.length === 3 && asked[2] === tx(2).id && s.shownId === tx(2).id && s.source === FORGOTTEN_SOURCE && s.badge === 'Live', `${tag}: the dropped demo again: the indexer is asked again (one request) and the copy shows again`, `${s.source} | ${asked.length} requests`)
+  // an id nobody holds still gets the indexer's own answer
+  await page.$eval('#txid', (el) => el.select())
+  await page.keyboard.sendCharacter(UNKNOWN)
+  await page.click('#look')
+  await settled(page)
+  s = await snap(page)
+  check(asked.length === 4 && asked[3] === UNKNOWN && s.status === NOT_FOUND && /error/.test(s.statusClass) && s.badge === 'Live' && s.shownId === null, `${tag}: an id we hold no copy of gets the indexer's "not found", with the reason, and the page is still live`, `${s.badge}: ${s.status.slice(0, 80)}`)
+  // a dropped demo with an audit key: all three ghosts work on the copy, after the error
+  await armReading(page)
+  await armAudit(page)
+  await page.select('#demo', hero(1).id)
+  await page.click('#hold')
+  await settled(page)
+  await heard(page)
+  s = await counted(page)
+  check(asked.length === 5 && asked[4] === hero(1).id && s.source === FORGOTTEN_SOURCE && s.badge === 'Live', `${tag}: demo ${demoNo(hero(1))} (with an audit key) is a saved copy too`, `${s.source} | ${asked.length} requests`)
+  expectHeard(s, hero(1), hero(1).to, `${tag}: demo ${demoNo(hero(1))}: ${hero(1).to}'s key`)
+  auditReads(s, hero(1), `${tag}: demo ${demoNo(hero(1))}: the audit key`)
+  checkLinks(s, hero(1).id, `${tag}: demo ${demoNo(hero(1))}`)
+  const noisy = consoleBad(log).filter((m) => !(/404/.test(m.text) && m.url.startsWith(INDEXER_URL)))
+  check(log.pageErrors.length === 0 && noisy.length === 0, `${tag}: no page error, and no console line except the browser's own note about each 404`, log.pageErrors.concat(noisy.map((m) => m.text)).join(' | '))
   await page.close()
 }
 
@@ -802,7 +941,7 @@ async function hashRun(browser) {
 async function loadingRun(browser) {
   const tag = 'while the code loads'
   const page = await browser.newPage()
-  await page.setViewport({ width: 390, height: 800, deviceScaleFactor: 1, isMobile: true, hasTouch: true })
+  await page.setViewport({ width: 375, height: 800, deviceScaleFactor: 1, isMobile: true, hasTouch: true })
   const problems = []
   page.on('pageerror', (e) => problems.push(String(e)))
   await page.setRequestInterception(true)
@@ -827,7 +966,7 @@ async function loadingRun(browser) {
   check(/is still loading/.test(early.status), `${tag}: a loading line shows`, early.status)
   check(early.buttons.every((b) => b.aria === 'true' && b.opacity < 1 && b.cursor === 'progress'), `${tag}: all four buttons say not ready (aria-disabled, dimmed, a progress cursor)`, early.buttons.map((b) => `${b.id}:${b.aria}`).join(' '))
   check(early.buttons.find((b) => b.id === 'look')?.disabled === true, `${tag}: "Look at it" is also disabled, being a submit button (a click or Enter on it would make the browser cancel the code that is still on its way)`)
-  await shot(page, 'seance-390-loading.png')
+  await shot(page, 'seance-375-loading.png')
   for (const id of ['summon', 'hold', 'look']) await page.click(`#${id}`)
   await page.focus('#txid')
   await page.keyboard.type('abc')
@@ -838,13 +977,16 @@ async function loadingRun(browser) {
   for (const r of held) r.continue()
   await nav
   await until(page, () => document.querySelectorAll('#demo option').length > 0, undefined, 20000)
+  await settled(page) // the page draws its saved example as soon as its code has run
   const ready = await probe()
-  check(ready.status === '', `${tag}: the loading line is gone once the code has run`, ready.status)
-  check(ready.buttons.every((b) => b.aria === null && b.opacity === 1), `${tag}: the four buttons are ready (no aria-disabled, no dimming)`, ready.buttons.map((b) => `${b.id}:${b.aria}`).join(' '))
+  const drawn = await snap(page)
+  check(!/is still loading/.test(ready.status) && /^A saved example is on the table/.test(ready.status), `${tag}: the loading line is gone once the code has run; the status line now describes the saved example`, ready.status.slice(0, 70))
+  check(drawn.shownId === hero(1).id && drawn.source === EXAMPLE_SOURCE, `${tag}: the saved example is on the table, with nothing asked of the indexer`, String(drawn.shownId).slice(0, 12))
+  check(ready.buttons.every((b) => b.aria !== 'true' && b.opacity === 1), `${tag}: the four buttons are ready (not aria-disabled, no dimming)`, ready.buttons.map((b) => `${b.id}:${b.aria}`).join(' '))
   await page.click('#hold')
   await settled(page)
   const s = await snap(page)
-  check(s.shownId === hero(1).id, `${tag}: the first click after that works`, String(s.shownId).slice(0, 12))
+  check(s.shownId === hero(1).id && /^The indexer did not answer, so the page switched to recorded data\./.test(s.status), `${tag}: the first click after that works (this browser cannot reach the indexer, so the page says so and switches to recorded data)`, s.status.slice(0, 70))
   check(problems.length === 0, `${tag}: no page error`, problems.join(' | '))
   await page.close()
 }
@@ -938,7 +1080,7 @@ async function motionRun(browser) {
   const n3 = await probeAudit(normal.page)
   check(n1.flame === 'flicker' && n2 === 'rise' && n3.reading === 'rise', 'motion: by default the flame flickers and the readings of the Medium and the Auditor fade in (control)', `${n1.flame}, ${n2}, ${n3.reading}`)
   await normal.page.close()
-  const calm = await open(browser, { w: 390, reduce: true })
+  const calm = await open(browser, { w: 375, reduce: true })
   await calm.page.click('#mode-switch')
   const c1 = await anim(calm.page)
   const c2 = await probeReading(calm.page)
@@ -1042,7 +1184,9 @@ function staticChecks() {
   check(rooted.length === 0 && refs.some((u) => u.startsWith('./assets/')), 'build: asset paths are relative (works under /seance/)', rooted.join(', ') || refs.filter((u) => !u.startsWith('http')).join(' '))
   check(!/<script(?![^>]*\bsrc=)/i.test(html) && !/\sstyle=/i.test(html), 'build: no inline script or style in index.html')
   check(!existsSync(join(DIST, 'gate.html')) && existsSync(join(DIST, 'THIRD-PARTY-LICENSES.md')) && existsSync(join(DIST, 'favicon.svg')), 'build: no gate page shipped; third-party licence notices and favicon are')
-  const allowed = new Set([INDEXER_HOST, new URL(EXPLORER_URL).host, 'ootle.tari.com', 'www.w3.org', new URL(PUBLIC_URL).host]) // the last one only in the link-preview tags: the page fetches nothing from it
+  // Hosts the page may name: the indexer (the only one it contacts: the CSP allows nothing else), and links a visitor can click: the explorer, ootle.tari.com, the second
+  // public indexer (raw answers of saved copies), GitHub and raw.githubusercontent.com (the template, the saved ledger). The last two are the SVG namespace and the preview tags.
+  const allowed = new Set([INDEXER_HOST, new URL(EXPLORER_URL).host, 'ootle.tari.com', new URL(MIRROR_URL).host, 'github.com', new URL(LEDGER_URL).host, 'www.w3.org', new URL(PUBLIC_URL).host])
   const found = new Map()
   const walkDir = (d) => {
     for (const n of readdirSync(d)) {
@@ -1066,7 +1210,10 @@ const launch = (dir, extra = []) => puppeteer.launch({ executablePath: process.e
 const online = await launch(dirs[0])
 // every host except this machine fails to resolve: the indexer is unreachable and nothing outside can be contacted
 const offline = await launch(dirs[1], ['--host-resolver-rules=MAP * ~NOTFOUND , EXCLUDE 127.0.0.1'])
+// SMOKE_ONLY=forgotten,loading runs just the scenarios whose names start so (a quick look while working); such a run writes no evidence/smoke.txt
+const only = process.env.SMOKE_ONLY?.split(',')
 const scenario = async (name, fn) => {
+  if (only && !only.some((p) => name.startsWith(p))) return
   try {
     await fn()
   } catch (e) {
@@ -1090,13 +1237,14 @@ try {
   section('palette contrast')
   await scenario('palette', () => paletteChecks(online))
   section('judge path, live indexer')
-  for (const w of [1280, 390]) await scenario(`live ${w}`, () => walk(online, { mode: 'live', w }))
+  for (const w of [1280, 375]) await scenario(`live ${w}`, () => walk(online, { mode: 'live', w }))
   section('judge path, recorded (fixture) mode, no network')
-  for (const w of [1280, 390]) await scenario(`recorded ${w}`, () => walk(offline, { mode: 'recorded', w }))
+  for (const w of [1280, 375]) await scenario(`recorded ${w}`, () => walk(offline, { mode: 'recorded', w }))
   section('the indexer goes away')
-  for (const w of [1280, 390]) await scenario(`fallback ${w}`, () => fallbackRun(offline, w))
+  for (const w of [1280, 375]) await scenario(`fallback ${w}`, () => fallbackRun(offline, w))
   await scenario('hang', () => hangRun(online))
-  await scenario('forgotten', () => forgottenRun(online))
+  section('the indexer forgot a demo (mocked: it answers 404 to all but one)')
+  for (const w of [1280, 375]) await scenario(`forgotten ${w}`, () => forgottenRun(online, w))
   await scenario('uppercase link', () => hashRun(offline))
   await scenario('loading', () => loadingRun(offline))
   section('keyboard, reduced motion, a slow phone, policy')
@@ -1112,5 +1260,5 @@ try {
   server.close()
 }
 say(failed === 0 ? '\nRESULT: PASS' : `\nRESULT: FAIL (${failed})`)
-writeFileSync(join(EVID, 'smoke.txt'), lines.join('\n') + '\n')
+if (!only) writeFileSync(join(EVID, 'smoke.txt'), lines.join('\n') + '\n')
 process.exit(failed === 0 ? 0 : 1)

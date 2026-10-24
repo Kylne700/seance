@@ -1,9 +1,10 @@
 // Do the links still resolve, and do our recorded copies still match what the public indexers return?
-// Plain GETs, one at a time, 250 ms apart, no retries and no polling: about 45 small requests and one headless page.
+// Plain GETs, one at a time, 250 ms apart, no retries and no polling: about 50 small requests and one headless page.
 //   First indexer (INDEXER_URL: the one the page and the explorer read): status only. 404 means it dropped the transaction. That is
 //     not a failure, because the page then shows the saved copy and says so; it is reported so the README's dated note can be checked.
 //   Second indexer (MIRROR_URL: where the README's transaction links point): must answer 200 for the id with outcome Commit. Where
 //     ledger.json holds the indexer's answer, it must equal that answer except `transaction.source` ("gossip" in our copy, "local" there).
+//   The same two checks for the 2 transactions of the recorded sample that Summon falls back to (ledger.recent).
 // Also checked: the demo token's template and the token itself (its view key is the audit key), the explorer's page for the token
 // (the one page that needs a browser), the two repository links the page uses, and the two footer links. A made-up id is the
 // negative control: the second indexer must not answer 200 for it.
@@ -58,29 +59,32 @@ const withoutSource = (reply) => {
 say(`Links and recorded copies, checked ${new Date().toISOString()}`)
 say(`first indexer ${INDEXER_URL}, second indexer ${MIRROR_URL}, explorer ${EXPLORER_URL}`)
 
-// 1. the 18 transactions: 4 SEANCE demos, 11 TARI demos, 3 set-up steps. Only the first 15 have a recorded answer.
-const entries = [...ledger.txs, ...ledger.hero, ...ledger.setup]
-let heldByFirst = 0
-let equalToRecording = 0
-let recorded = 0
-for (const e of entries) {
-  const first = await get(`${INDEXER_URL}/transactions/${e.id}`)
-  if (first.status === 200) heldByFirst++
-  const second = await get(mirrorTx(e.id))
+// one transaction: what each indexer says, and whether the second one's answer equals our recording (when we hold one)
+async function row(id, reply) {
+  const first = await get(`${INDEXER_URL}/transactions/${id}`)
+  const second = await get(mirrorTx(id))
   const tx = second.json?.transaction
-  const settled = tx?.transaction_id === e.id && tx?.summary?.outcome === 'Commit'
+  const settled = tx?.transaction_id === id && tx?.summary?.outcome === 'Commit'
   let same = 'no recorded answer'
   let sameOk = true
-  if (e.reply) {
-    recorded++
-    sameOk = canon(withoutSource(second.json)) === canon(withoutSource(e.reply))
-    if (sameOk) equalToRecording++
+  if (reply) {
+    sameOk = canon(withoutSource(second.json)) === canon(withoutSource(reply))
     same = sameOk ? 'equals the recording' : 'DIFFERS from the recording'
   }
-  const ok = second.status === 200 && settled && sameOk
-  say(`${verdict(ok)} ${e.id}  first indexer ${first.status}  second indexer ${second.status}  shows the id with outcome Commit: ${settled}  ${same}`)
+  say(`${verdict(second.status === 200 && settled && sameOk)} ${id}  first indexer ${first.status}  second indexer ${second.status}  shows the id with outcome Commit: ${settled}  ${same}`)
+  return { held: first.status === 200, equal: !!reply && sameOk }
 }
-say(`first indexer still holds ${heldByFirst} of ${entries.length} (404 for the rest: the page then shows the saved copy; not a failure); ${equalToRecording} of ${recorded} recorded answers equal the second indexer's, source field aside`)
+
+// 1. the 18 transactions: 4 SEANCE demos, 11 TARI demos, 3 set-up steps. Only the first 15 have a recorded answer.
+const entries = [...ledger.txs, ...ledger.hero, ...ledger.setup]
+const done = []
+for (const e of entries) done.push(await row(e.id, e.reply))
+say(`first indexer still holds ${done.filter((d) => d.held).length} of ${entries.length} (404 for the rest: the page then shows the saved copy; not a failure); ${done.filter((d) => d.equal).length} of ${entries.filter((e) => e.reply).length} recorded answers equal the second indexer's, source field aside`)
+
+// 1b. the recorded sample that Summon shows when the newest transactions hold no private transfer: ledger.recent, in the indexer's shape
+const sample = []
+for (const t of ledger.recent.transactions) sample.push(await row(t.transaction_id, { transaction: t }))
+say(`recorded sample (Summon's fallback, saved ${ledger.recent.capturedAt.slice(0, 10)}): first indexer still holds ${sample.filter((d) => d.held).length} of ${sample.length}; ${sample.filter((d) => d.equal).length} of ${sample.length} recorded answers equal the second indexer's, source field aside`)
 
 // 2. negative control: an id nobody sent. If the check passed here, it would prove nothing.
 const none = 'ab'.repeat(32)
