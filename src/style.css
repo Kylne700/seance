@@ -153,6 +153,9 @@ details[open] > summary::before { content: '\25BE'; }
 details.note > summary { font-family: var(--serif); }
 summary .peek { font-family: var(--mono); font-size: .8125rem; color: var(--muted); font-weight: 400; overflow-wrap: anywhere; }
 
+.maker { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 4px; }
+.code { margin: 8px 0 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--well); font-family: var(--mono); font-size: .8125rem; line-height: 1.5; color: #e4defa; overflow: auto; max-height: 24rem; tab-size: 4; }
+
 .veiled { display: flex; align-items: center; gap: 10px; margin: 10px 0 0; color: var(--muted); font-size: .875rem; }
 .bar { flex: none; width: 56px; height: 12px; border-radius: 6px; background: repeating-linear-gradient(135deg, #5a4f82 0 6px, #3d3558 6px 12px); }
 

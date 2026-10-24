@@ -1,11 +1,12 @@
 import { audit, audited } from './auditor.ts'
 import { txFromHash } from './chain.ts'
-import { createData, demoKeys, demos, LookupError, recordedWorld, type Demo, type Shown } from './data.ts'
+import { createData, demoKeys, demos, LookupError, recordedWorld, savedOn, type Demo, type Shown } from './data.ts'
 import { listen, viewSecretProblem } from './decrypt.ts'
 import { clear, h } from './dom.ts'
-import { outcomeLabel, short } from './format.ts'
+import { outcomeLabel, plural, short } from './format.ts'
 import { poltergeist } from './poltergeist.ts'
-import { explorerLink, renderAudit, renderLeaks, renderPoltergeist, renderReading, renderStranger, renderStrangerEmpty, showTally, type Hearing } from './render.ts'
+import templateSource from '../template/src/lib.rs?raw'
+import { proofLinks, renderAudit, renderLeaks, renderPoltergeist, renderReading, renderStranger, renderStrangerEmpty, showTally, type Hearing } from './render.ts'
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const el = document.getElementById(id)
@@ -116,12 +117,13 @@ function checkRadio(group: 'key' | 'audit-key', value: string | null): void {
 function describe(s: Shown): string {
   const what = `Showing transaction ${short(s.view.id, 8)} (${outcomeLabel(s.view)}).`
   if (s.ours) return `Nobody else's private transfer was among the latest transactions, so this is one of the demos we made for this page. ${what}`
-  if (s.forgotten) return `The indexer no longer holds this transaction, so the page switched to recorded data. ${what}`
   if (s.fellBack) return `The indexer did not answer, so the page switched to recorded data. ${what}`
   if (s.quietChain) return `The latest live transactions held no private transfer, so this one is recorded. ${what}`
-  if (demos.find((d) => d.id === s.view.id)?.kind === 'audited') return `${what} Paid in the demo token SEANCE, which has an audit key. The Medium, with the recipient's key, opens one note (amount and memo). The Auditor, with the audit key, counts the amount of both and cannot read a memo.`
-  if (demos.find((d) => d.id === s.view.id)?.kind === 'revealed') return `${what} This sender revealed the amount on purpose, so there is nothing sealed to read: compare the Stranger's view with the other demos.`
-  return what
+  const kind = demos.find((d) => d.id === s.view.id)?.kind
+  const about = kind === 'audited' ? ' Paid in the demo token SEANCE, which has an audit key. The Medium, with the recipient\'s key, opens one note (amount and memo). The Auditor, with the audit key, counts the amount of both and cannot read a memo.' : kind === 'revealed' ? " This sender revealed the amount on purpose, so there is nothing sealed to read: compare the Stranger's view with the other demos." : ''
+  if (s.preview) return 'A saved example is on the table, so the three ghosts have something to read. Nothing has been asked of the indexer yet: summon a recent transaction to read a live one, or paste any id.'
+  if (s.forgotten) return `The public indexer no longer holds this transaction, so this is the copy saved on ${savedOn}. Anything you paste still goes to the live indexer. ${what}${about}`
+  return `${what}${about}`
 }
 
 // The cards sit below the picker, so after a call the page brings the answer (or the error) into view.
@@ -149,9 +151,11 @@ async function load(job: () => Promise<Shown>, opts: { key?: string; auditKey?: 
     current = shown
     renderStranger(strangerBody, shown)
     renderLeaks(leaksBody, shown.view)
-    mediumActions.replaceChildren(explorerLink(shown.view.id)) // the Medium card has its own link to the same transaction
-    txid.value = shown.view.id
-    history.replaceState(null, '', `#tx=${shown.view.id}`)
+    mediumActions.replaceChildren(proofLinks(shown)[0]) // the Medium card has its own link to the same transaction
+    if (!shown.preview) {
+      txid.value = shown.view.id
+      history.replaceState(null, '', `#tx=${shown.view.id}`)
+    }
     if (opts.key) {
       checkRadio('key', opts.key)
       ownKey.value = ''
@@ -223,10 +227,18 @@ $('look').removeAttribute('disabled')
 setStatus('')
 
 reflectMode()
-renderStrangerEmpty(strangerBody)
-renderLeaks(leaksBody, null)
 renderPoltergeist($('polt-body'), poltergeist(recordedWorld())) // recorded data only: the same numbers on every visit
-void hear()
-void count()
+$('template-code').textContent = templateSource
+$('template-lines').textContent = plural(templateSource.trimEnd().split('\n').length, 'line')
 const fromHash = txFromHash(location.hash)
-if (fromHash) void load(() => data.lookup(fromHash))
+if (fromHash) {
+  renderStrangerEmpty(strangerBody)
+  renderLeaks(leaksBody, null)
+  void hear()
+  void count()
+  void load(() => data.lookup(fromHash))
+} else {
+  // The first screen is never empty: the three ghosts read demo 1 from the recording, with Bob's key and the audit key already in hand.
+  // The address bar and the id box stay as they are, and the status line says it is a saved example.
+  void load(async () => data.example(), { key: demos[0].to, auditKey: 'auditor' })
+}

@@ -1,8 +1,8 @@
 // Turns parsed data into DOM. Everything that comes from the chain (ids, hex, memos) goes in as text, never as HTML.
 import { RANGE_MAX, type Heard } from './auditor.ts'
 import type { StealthOutput, StealthStatement, TxView } from './chain.ts'
-import { explorerTx } from './config.ts'
-import type { Shown } from './data.ts'
+import { explorerTx, LEDGER_URL, mirrorTx } from './config.ts'
+import { savedOn, type Shown } from './data.ts'
 import type { Reading } from './decrypt.ts'
 import { clear, h } from './dom.ts'
 import { amountOf, baseUnits, outcomeLabel, plural, short, tari, theOther, when } from './format.ts'
@@ -35,8 +35,23 @@ function outcomeFact(v: TxView): HTMLElement {
   return fact('Outcome', outcomeLabel(v), caption(text ?? ''))
 }
 
-export function explorerLink(id: string): HTMLElement {
-  return h('a', { class: 'btn ghost', href: explorerTx(id), target: '_blank', rel: 'noopener noreferrer' }, 'Open in the explorer', h('span', { class: 'sr-only' }, ' (opens in a new tab)'))
+const newTab = (): HTMLElement => h('span', { class: 'sr-only' }, ' (opens in a new tab)')
+export const outLink = (href: string, text: string, cls = 'btn ghost'): HTMLElement => h('a', { class: cls, href, target: '_blank', rel: 'noopener noreferrer' }, text, newTab())
+
+/**
+ * The links beside an answer, so a visitor can check it without trusting this page. The explorer reads the same indexer as the page, so it only helps while
+ * that indexer holds the transaction. A recorded answer points at the raw answer of Tari's second public indexer and at the recording itself.
+ */
+export function proofLinks(s: Shown): HTMLElement[] {
+  return s.mode === 'live' ? [outLink(explorerTx(s.view.id), 'Open in the explorer')] : [outLink(mirrorTx(s.view.id), 'Raw answer from a second public indexer'), outLink(LEDGER_URL, 'The saved copy (ledger.json)')]
+}
+
+/** The one line that says where the Stranger's answer came from. */
+function sourceLine(s: Shown): string {
+  if (s.mode === 'live') return 'Live: read from the indexer just now.'
+  if (s.preview) return `Recorded: the page's starting example, a copy saved on ${savedOn}. Nothing was asked of the indexer.`
+  if (s.forgotten) return `Recorded: the public indexer no longer holds this transaction, so this is the copy saved on ${savedOn}.`
+  return `Recorded: a saved copy of the indexer's answer, taken on ${savedOn}.`
 }
 
 // On a phone the sealed notes start closed, so the page does not bury the medium under screens of hex. Keep 960 in step with style.css.
@@ -88,7 +103,7 @@ function statement(st: StealthStatement, n: number, feePaid: number | null): HTM
       st.inputCommitments.length ? fact('Spent notes', ...st.inputCommitments.slice(0, MAX_NOTES).map((c) => h('code', { class: 'hex' }, short(c, 12))), caption('Which old notes were spent is public. What was inside them is not.')) : null,
     ),
     ...shown.map((o, i) => note(o, i, st.outputs.length)),
-    st.outputs.length > shown.length ? caption(`${plural(st.outputs.length - shown.length, 'more sealed note')} not shown. The explorer lists them all.`) : null,
+    st.outputs.length > shown.length ? caption(`${plural(st.outputs.length - shown.length, 'more sealed note')} not shown. The links above open the whole transaction.`) : null,
   )
 }
 
@@ -96,7 +111,7 @@ export function renderStranger(body: HTMLElement, s: Shown): void {
   const v: TxView = s.view
   clear(body)
   body.append(
-    h('p', { class: `source ${s.mode}` }, s.mode === 'live' ? 'Live: read from the indexer just now.' : "Recorded: a saved copy of the indexer's answer."),
+    h('p', { class: `source ${s.mode}` }, sourceLine(s)),
     h(
       'dl',
       { class: 'facts' },
@@ -106,7 +121,7 @@ export function renderStranger(body: HTMLElement, s: Shown): void {
       fact('Created', when(v.createdAt)),
       fact('Instructions', h('ul', { class: 'instr' }, ...v.instructionKinds.map((k) => h('li', null, h('code', null, k), KIND_CAPTION[k] ? h('span', { class: 'cap' }, KIND_CAPTION[k]) : null)))),
     ),
-    h('div', { class: 'actions' }, explorerLink(v.id)),
+    h('div', { class: 'actions' }, ...proofLinks(s)),
     ...v.statements.map((st, n) => statement(st, n, v.feePaid)),
     ...(v.statements.length === 0 ? [h('p', { class: 'empty' }, 'This transaction has no private transfer, so nothing in it is sealed.')] : []),
   )
@@ -127,7 +142,7 @@ function leakItem(l: Leak): HTMLElement {
       'dd',
       null,
       ...(shown.length ? shown.map((x) => (l.mono ? hex(x) : h('p', { class: 'val' }, x))) : [h('p', { class: 'val none' }, 'None')]),
-      l.values.length > shown.length ? caption(`${l.values.length - shown.length} more not shown. The explorer lists them all.`) : null,
+      l.values.length > shown.length ? caption(`${l.values.length - shown.length} more not shown. The links in the Stranger card open the whole transaction.`) : null,
       caption(l.caption),
     ),
   )

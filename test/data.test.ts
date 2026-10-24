@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import ledger from '../ledger.json'
 import { INDEXER_URL, RECENT_LIMIT } from '../src/config.ts'
-import { createData, demos, LookupError, ourIds, type Problem } from '../src/data.ts'
+import { createData, demos, LookupError, ourIds, savedOn, type Problem } from '../src/data.ts'
 import { decryptOutput, listen } from '../src/decrypt.ts'
 import { txFromHash, type TxView } from '../src/chain.ts'
 
@@ -231,20 +231,19 @@ describe('live mode', () => {
 })
 
 describe('automatic fallback to recorded data', () => {
-  const cases: [string, () => unknown, boolean][] = [ // [name, arrange, the indexer answered but no longer holds the demo]
-    ['the connection is refused', () => blocked(), false],
-    ['the indexer does not answer in time', () => never(), false],
-    ['the indexer answers 500', () => stubFetch(() => json({ error: 'boom' }, 500)), false],
-    ['the indexer answers 503', () => stubFetch(() => json({ error: 'down' }, 503)), false],
-    ['the indexer throttles us (429)', () => stubFetch(() => json({ error: 'slow down' }, 429)), false],
-    ['a demo id answers 404 (the indexer no longer holds it: dropped history or a testnet reset)', () => stubFetch(() => json({ error: 'not known to this indexer' }, 404)), true],
+  const cases: [string, () => unknown][] = [ // [name, arrange]: the indexer is unusable
+    ['the connection is refused', () => blocked()],
+    ['the indexer does not answer in time', () => never()],
+    ['the indexer answers 500', () => stubFetch(() => json({ error: 'boom' }, 500))],
+    ['the indexer answers 503', () => stubFetch(() => json({ error: 'down' }, 503))],
+    ['the indexer throttles us (429)', () => stubFetch(() => json({ error: 'slow down' }, 429))],
   ]
-  for (const [name, arrange, forgotten] of cases) {
+  for (const [name, arrange] of cases) {
     it(`${name}: the page switches to recorded, says so, and the demo still reads right`, async () => {
       arrange()
       const data = createData({ timeoutMs: 40 })
       const shown = await data.lookup(bobTx.id)
-      expect(shown).toMatchObject({ mode: 'recorded', fellBack: true, forgotten })
+      expect(shown).toMatchObject({ mode: 'recorded', fellBack: true, forgotten: false })
       expect(data.mode).toBe('recorded')
       await expectsReading(shown.view, bobTx)
       // end to end: the very same words reach the medium
@@ -295,5 +294,91 @@ describe('automatic fallback to recorded data', () => {
     data.setMode('live')
     expect((await data.lookup(bobTx.id)).mode).toBe('live')
     expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('a demo the indexer no longer holds (it answers 404)', () => {
+  const gone = () => json({ error: 'not known to this indexer' }, 404)
+
+  it('only that answer comes from the recording: labelled, still readable, and the page stays live', async () => {
+    stubFetch(gone)
+    const data = createData()
+    const shown = await data.lookup(bobTx.id)
+    expect(shown).toMatchObject({ mode: 'recorded', fellBack: false, forgotten: true, preview: false })
+    expect(data.mode).toBe('live')
+    await expectsReading(shown.view, bobTx)
+  })
+
+  it('every demo is served that way, one request each', async () => {
+    const fetchSpy = stubFetch(gone)
+    const data = createData()
+    for (const d of demos) expect(await data.lookup(d.id), `demo ${d.n}`).toMatchObject({ mode: 'recorded', forgotten: true, fellBack: false })
+    expect(fetchSpy).toHaveBeenCalledTimes(demos.length)
+    expect(data.mode).toBe('live')
+  })
+
+  it('the next call still asks the indexer: a demo it holds comes back live, an unknown id gets its own "not found"', async () => {
+    const fetchSpy = stubFetch((url) => (url.endsWith(txs[1].id) ? json(txs[1].reply) : gone()))
+    const data = createData()
+    expect((await data.lookup(bobTx.id)).forgotten).toBe(true)
+    expect(await data.lookup(txs[1].id)).toMatchObject({ mode: 'live', forgotten: false })
+    const e = await data.lookup(unknownId).catch((x: unknown) => x)
+    expect(e).toBeInstanceOf(LookupError)
+    expect((e as LookupError).kind).toBe('not-found')
+    expect((e as LookupError).message).toMatch(/old id may be gone/)
+    expect(data.mode).toBe('live')
+    expect(fetchSpy).toHaveBeenCalledTimes(3)
+  })
+
+  it('an indexer that comes back with its history is believed again', async () => {
+    let holds = false
+    stubFetch(() => (holds ? json(bobTx.reply) : gone()))
+    const data = createData()
+    expect((await data.lookup(bobTx.id)).forgotten).toBe(true)
+    holds = true
+    expect(await data.lookup(bobTx.id)).toMatchObject({ mode: 'live', forgotten: false })
+  })
+
+  it('is no outage: an id it is not "forgotten" for is not served from the recording', async () => {
+    stubFetch(gone)
+    expect(await fails(createData().lookup(unknownId))).toBe('not-found')
+  })
+})
+
+describe("the page's starting example", () => {
+  it('is demo 1 from the recording, asks nobody, and leaves the page live', async () => {
+    const fetchSpy = blocked()
+    const data = createData()
+    const shown = data.example()
+    expect(shown).toMatchObject({ mode: 'recorded', preview: true, fellBack: false, forgotten: false, quietChain: false, ours: false })
+    expect(shown.view.id).toBe(demos[0].id)
+    expect(demos[0].kind).toBe('audited') // the one example where all three ghosts have something to read
+    expect(data.mode).toBe('live')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('reads as the recording says: the recipient opens one note, the stranger and a wrong key hear nothing', async () => {
+    const shown = createData().example()
+    const hero = ledger.hero[0]
+    const heard = await listen(keys[hero.to].viewSecret, shown.view.outputs)
+    expect(heard).toHaveLength(1)
+    expect(heard[0].plain).toEqual({ value: BigInt(hero.amount), memo: hero.memo })
+    expect(await listen(keys.eve.viewSecret, shown.view.outputs)).toHaveLength(0)
+  })
+
+  it('no other answer is marked as the starting example', async () => {
+    stubFetch(() => json(bobTx.reply))
+    const data = createData({ pick: () => 0 })
+    expect((await data.lookup(bobTx.id)).preview).toBe(false)
+    expect((await data.recent()).preview).toBe(false)
+  })
+})
+
+describe('the date of the recorded copies', () => {
+  it('every recorded answer was made on savedOn, the day the pages say', () => {
+    const made = [...ledger.txs, ...ledger.hero].map((t) => (t.reply as { transaction: { created_at: string } }).transaction.created_at)
+    made.push(...ledger.recent.transactions.map((t) => t.created_at))
+    expect(made.length).toBe(ledger.txs.length + ledger.hero.length + ledger.recent.transactions.length)
+    for (const c of made) expect(c.startsWith(savedOn), c).toBe(true)
   })
 })
