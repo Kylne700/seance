@@ -1,23 +1,23 @@
-Explorer links, checked 2026-10-20T21:05:27.262Z against https://explorer.tari.mw
-ok   e99ccae24789ef34dbba783c9675f90f89757043a5f456b6d521df6df60ae15b  http 200  shows the id: true  shows Commit: true  title: Transaction e99ccae2… · Veil  (2655 ms)
-ok   e04e6e78021a71bdfa6902674a5401fb64efb54ce948c5c4e5fc287cf6074a7f  http 200  shows the id: true  shows Commit: true  title: Transaction e04e6e78… · Veil  (1451 ms)
-ok   80a13d44a497870e01bdf42af626633c792f3df1f6fb802da884f37991dc0125  http 200  shows the id: true  shows Commit: true  title: Transaction 80a13d44… · Veil  (1399 ms)
-ok   f302e0ba4dabc96c694934b4c11b857fd3d09de61c62428d991ffff78d3f85c3  http 200  shows the id: true  shows Commit: true  title: Transaction f302e0ba… · Veil  (1435 ms)
-ok   1bee7f75e876d109cbe3bb9317a416b96cd9da8386fa082530c0682301cbc009  http 200  shows the id: true  shows Commit: true  title: Transaction 1bee7f75… · Veil  (1383 ms)
-ok   a920bd7d69cbbf53f27c149b2fef7336c25e1db16c666d4c65176343be9a10c0  http 200  shows the id: true  shows Commit: true  title: Transaction a920bd7d… · Veil  (1408 ms)
-ok   4fd2cbd216c2c3a3d556b55a2235197f895ad88cc0ac8230aa47146262512939  http 200  shows the id: true  shows Commit: true  title: Transaction 4fd2cbd2… · Veil  (1390 ms)
-ok   05d7f7a53117fed5dbe0fcd262b2c72af5b2251b4a10d78bdfcb97cbbf5efd55  http 200  shows the id: true  shows Commit: true  title: Transaction 05d7f7a5… · Veil  (1412 ms)
-ok   90b2373bd044ec96ce42ebf8f0d3e6f1e040bdda5931211a259f37e8ee2a4fe2  http 200  shows the id: true  shows Commit: true  title: Transaction 90b2373b… · Veil  (1408 ms)
-ok   99e275ac213ac64549e03ce53ea1e49f3f05b500ea7e73d16b7667b6450dc59c  http 200  shows the id: true  shows Commit: true  title: Transaction 99e275ac… · Veil  (1436 ms)
-ok   571724b644ed8c4b9efee6a528fa867a388fc68e87066c92809f2b8ae10f9ba8  http 200  shows the id: true  shows Commit: true  title: Transaction 571724b6… · Veil  (1603 ms)
-ok   891b43606b33d8cdfcc37a44793210ef4a517312c3180772b154d86fc08a2ace  http 200  shows the id: true  shows Commit: true  title: Transaction 891b4360… · Veil  (1448 ms)
-ok   1666311102df4c809a4092de5064d40114ff4616218df8ac74a7662b2c48ff8c  http 200  shows the id: true  shows Commit: true  title: Transaction 16663111… · Veil  (1500 ms)
-ok   0c3cc69e2a59bcd331ac4759c5187ed3c212d5f9a424cc1eeaa7293be68a5adb  http 200  shows the id: true  shows Commit: true  title: Transaction 0c3cc69e… · Veil  (1476 ms)
-ok   8206f7cc9cde4a7ede73ee9c27e7198744df0d97a13abc4cb451f85fd26776aa  http 200  shows the id: true  shows Commit: true  title: Transaction 8206f7cc… · Veil  (1483 ms)
-ok   52396cf13c732ba72e6b248462d980dc392795c7e0c115b1cb0203248e468193  http 200  shows the id: true  shows Commit: true  title: Transaction 52396cf1… · Veil  (1565 ms)
-ok   6602b7b2a5d84e5ca2ac4cfb38699efe1ae73d183eec943794fd484d47ddf9f8  http 200  shows the id: true  shows Commit: true  title: Transaction 6602b7b2… · Veil  (1433 ms)
-ok   3b12856d3f83792977244e795fb53a49d6a26ce09591a92aab42defe4f140f33  http 200  shows the id: true  shows Commit: true  title: Transaction 3b12856d… · Veil  (1404 ms)
-ok   negative control abababababab...  shows Commit: false  (must be false)  page says: Veil Overview Events Templates Validators L1 Supply ⌘K esmeralda · epoch 12,530 Couldn't load this from the indexer Tran
+Explorer links, checked 2026-10-20T21:41:01.530Z against https://explorer.tari.mw
+ok   e99ccae24789ef34dbba783c9675f90f89757043a5f456b6d521df6df60ae15b  http 200  shows the id: true  shows Commit: true  title: Transaction e99ccae2… · Veil  (2273 ms)
+ok   e04e6e78021a71bdfa6902674a5401fb64efb54ce948c5c4e5fc287cf6074a7f  http 200  shows the id: true  shows Commit: true  title: Transaction e04e6e78… · Veil  (1396 ms)
+ok   80a13d44a497870e01bdf42af626633c792f3df1f6fb802da884f37991dc0125  http 200  shows the id: true  shows Commit: true  title: Transaction 80a13d44… · Veil  (1358 ms)
+ok   f302e0ba4dabc96c694934b4c11b857fd3d09de61c62428d991ffff78d3f85c3  http 200  shows the id: true  shows Commit: true  title: Transaction f302e0ba… · Veil  (1350 ms)
+ok   1bee7f75e876d109cbe3bb9317a416b96cd9da8386fa082530c0682301cbc009  http 200  shows the id: true  shows Commit: true  title: Transaction 1bee7f75… · Veil  (1353 ms)
+ok   a920bd7d69cbbf53f27c149b2fef7336c25e1db16c666d4c65176343be9a10c0  http 200  shows the id: true  shows Commit: true  title: Transaction a920bd7d… · Veil  (1341 ms)
+ok   4fd2cbd216c2c3a3d556b55a2235197f895ad88cc0ac8230aa47146262512939  http 200  shows the id: true  shows Commit: true  title: Transaction 4fd2cbd2… · Veil  (1359 ms)
+ok   05d7f7a53117fed5dbe0fcd262b2c72af5b2251b4a10d78bdfcb97cbbf5efd55  http 200  shows the id: true  shows Commit: true  title: Transaction 05d7f7a5… · Veil  (1342 ms)
+ok   90b2373bd044ec96ce42ebf8f0d3e6f1e040bdda5931211a259f37e8ee2a4fe2  http 200  shows the id: true  shows Commit: true  title: Transaction 90b2373b… · Veil  (1354 ms)
+ok   99e275ac213ac64549e03ce53ea1e49f3f05b500ea7e73d16b7667b6450dc59c  http 200  shows the id: true  shows Commit: true  title: Transaction 99e275ac… · Veil  (1355 ms)
+ok   571724b644ed8c4b9efee6a528fa867a388fc68e87066c92809f2b8ae10f9ba8  http 200  shows the id: true  shows Commit: true  title: Transaction 571724b6… · Veil  (1542 ms)
+ok   891b43606b33d8cdfcc37a44793210ef4a517312c3180772b154d86fc08a2ace  http 200  shows the id: true  shows Commit: true  title: Transaction 891b4360… · Veil  (1503 ms)
+ok   1666311102df4c809a4092de5064d40114ff4616218df8ac74a7662b2c48ff8c  http 200  shows the id: true  shows Commit: true  title: Transaction 16663111… · Veil  (1504 ms)
+ok   0c3cc69e2a59bcd331ac4759c5187ed3c212d5f9a424cc1eeaa7293be68a5adb  http 200  shows the id: true  shows Commit: true  title: Transaction 0c3cc69e… · Veil  (1398 ms)
+ok   8206f7cc9cde4a7ede73ee9c27e7198744df0d97a13abc4cb451f85fd26776aa  http 200  shows the id: true  shows Commit: true  title: Transaction 8206f7cc… · Veil  (1462 ms)
+ok   52396cf13c732ba72e6b248462d980dc392795c7e0c115b1cb0203248e468193  http 200  shows the id: true  shows Commit: true  title: Transaction 52396cf1… · Veil  (1525 ms)
+ok   6602b7b2a5d84e5ca2ac4cfb38699efe1ae73d183eec943794fd484d47ddf9f8  http 200  shows the id: true  shows Commit: true  title: Transaction 6602b7b2… · Veil  (1390 ms)
+ok   3b12856d3f83792977244e795fb53a49d6a26ce09591a92aab42defe4f140f33  http 200  shows the id: true  shows Commit: true  title: Transaction 3b12856d… · Veil  (1527 ms)
+ok   negative control abababababab...  shows Commit: false  (must be false)  page says: Veil Overview Events Templates Validators L1 Supply ⌘K esmeralda · epoch 12,531 Couldn't load this from the indexer Tran
 ok   footer link https://explorer.tari.mw  http 200
 ok   footer link https://ootle.tari.com  http 200
 RESULT: PASS
