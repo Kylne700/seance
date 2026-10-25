@@ -1,7 +1,7 @@
 {
   "name": "seance",
   "version": "0.1.0",
-  "description": "One real Tari stealth transaction, read by three ghosts: the Stranger, the Medium and (next) the Auditor.",
+  "description": "Three ghosts read one private Tari transaction in the browser: the Stranger (no key), the Medium (view key) and the Auditor (token audit key). A fourth, the Poltergeist, tries to link payments from public data.",
   "license": "MIT",
   "type": "module",
   "private": true,

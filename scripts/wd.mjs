@@ -1,4 +1,4 @@
-// Reused from the 2026-10-16..18 spike (seance/scripts/wd.mjs, our own code): walletd JSON-RPC helper.
+// Reused from our own 2026-10-16..18 spike (not published): walletd JSON-RPC helper.
 // Minimal walletd JSON-RPC helper (auth "none" daemon on 127.0.0.1). It requests an Admin token per process.
 // CLI: node scripts/wd.mjs <method> '<json params>' [maxChars]
 export const WD_URL = process.env.WD_URL ?? "http://127.0.0.1:5100/json_rpc";

@@ -2,7 +2,9 @@
 
 **Live: <https://kylne700.github.io/seance/>** (Tari Esmeralda testnet only) [![pages](https://github.com/Kylne700/seance/actions/workflows/pages.yml/badge.svg)](https://github.com/Kylne700/seance/actions/workflows/pages.yml)
 
-Seance reads real Tari Esmeralda transactions in your browser and shows, side by side, what a stranger with no key can read, what a recipient's view key adds, and what a token's audit key counts. Open the page and a real private transfer is already on the table with the three ghosts at work; paste any transaction id to see another.
+**Watch:** a [silent screen recording of about 60 seconds](https://kylne700.github.io/seance/media/seance-demo.mp4), filmed on the live page on 2026-10-25.
+
+Seance reads real Tari Esmeralda transactions in your browser and shows, side by side, what a stranger with no key can read, what a recipient's view key adds, and what a token's audit key counts. It also lists what a sealed payment still shows to everyone with no key at all, such as the token, the times, the fee and the notes it spends. Open the page and a real private transfer is already on the table with the three ghosts at work; paste any transaction id to see another.
 
 > **Dated note, 2026-10-24.** The public Esmeralda indexer that this page and Tari's explorer read (`ootle-indexer-a.tari.com`) no longer holds the 18 transactions linked in this file: it answers 404, and the explorer's pages for them say "not known to this indexer". The page copes. It asks the indexer first, and when the indexer is up but has dropped a demo transaction, that one card shows the copy saved in `ledger.json` (it says so, with the date the copy was saved, 2026-10-20) while the rest of the page stays live. The saved copies equal what Tari's second public indexer still returns, `https://ootle-indexer-b.tari.com/transactions/<id>`, except one field, `transaction.source` (15 of 15 saved answers on 2026-10-24, compared by `npm run links`; the 3 set-up transactions have no saved answer). The links in this file point to that second indexer. It is a stale mirror (its newest transaction is from 2026-10-21) and may drop history too.
 
@@ -17,7 +19,7 @@ Seance reads real Tari Esmeralda transactions in your browser and shows, side by
 
 **Limits, up front.** Testnet only: nothing here touches mainnet. The page trusts the indexer's answer and does not check it against the chain. The Auditor reads only the notes of our own demo token. The demo transactions come from one throwaway wallet, so the Poltergeist's numbers describe that wallet. The cryptography is the official SDK, which we did not audit. More in the [threat model](#threat-model).
 
-The four ghosts:
+Three ghosts read one transaction; a fourth studies the demo payments as a set:
 
 - **The Stranger** holds no key. It shows what everyone can see: the id, the outcome, the fee, the sealed notes as real bytes, each with a plain caption. Under the cards, **What still leaks** lists what stays public, with this transaction's real values.
 - **The Medium** holds a recipient's view key and listens inside the page. With the right key it hears the amount and the memo. With a wrong key it hears nothing: "The spirits are quiet."
@@ -215,9 +217,9 @@ Design decisions are in [design.md](design.md).
 
 ## Reused code
 
-The contest asks for new code. Everything here was written for this contest after 2026-10-01. Two files come from our own experiment of 2026-10-16 to 2026-10-18, the spike that checked the SDK before this build:
+The contest asks for new code. Everything here was written for this contest after 2026-10-01. Two files come from our own experiment of 2026-10-16 to 2026-10-18, the spike that checked the SDK before this build (not published):
 
-- `scripts/wd.mjs`: the walletd JSON-RPC helper, copied unchanged from the spike (`seance/scripts/wd.mjs`) apart from a header comment. Only the maintainer scripts `scripts/make-demo.mjs` and `scripts/make-hero.mjs` use it.
+- `scripts/wd.mjs`: the walletd JSON-RPC helper, copied unchanged from the spike apart from a header comment. Only the maintainer scripts `scripts/make-demo.mjs` and `scripts/make-hero.mjs` use it.
 - `scripts/make-demo.mjs`: written for this repo; its way of building and polling a stealth transfer through walletd follows the spike's `gate-c.mjs` (a few lines are the same). `scripts/make-hero.mjs` is new and follows the same pattern.
 
 `template/` is new code written for this contest, from the public `tari_template_lib` API. No code was copied from tari-project example repositories, from other published templates or from other contest entries. The Tari packages below are used as dependencies, not copied.
@@ -226,7 +228,7 @@ The contest asks for new code. Everything here was written for this contest afte
 
 `@tari-project/ootle`, `@tari-project/ootle-indexer`, `@tari-project/ootle-wasm` (the official SDK: indexer client, the view-key decryption and the audit-proof check, in WebAssembly; the build embeds its wasm unchanged except that the 56 build-machine home folders rustc left in its panic messages are blanked at the same length, `scripts/wasm-paths.ts`, and a test checks that nothing else differs), Vite, TypeScript, vitest, puppeteer-core and axe-core for the checks. The demo token's template is Rust on `tari_template_lib`, compiled to WebAssembly and published on Esmeralda; the page does not need it to run. Third-party licence notices ship in `dist/THIRD-PARTY-LICENSES.md`.
 
-This is not a wallet or an explorer. The parsing of transactions, the four ghosts, the recorded mode and the page are new.
+This is not a wallet or an explorer. The parsing of transactions, the ghosts, the recorded mode and the page are new.
 
 Developed with an AI coding agent (Claude Code).
 
