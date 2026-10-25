@@ -15,7 +15,6 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "stranger": "node scripts/stranger.mjs",
-    "gate": "node scripts/gate.mjs",
     "smoke": "node scripts/smoke.mjs",
     "links": "node scripts/links.mjs",
     "scan": "node scripts/scan.mjs",

@@ -76,23 +76,17 @@ function cspMeta(): Plugin {
   }
 }
 
-// `vite build --mode gate` builds the browser-gate page (gate.html) instead of the app. Neither ships the other.
-export default defineConfig(({ mode }) => {
-  const gate = mode === 'gate'
-  return {
-    base: './',
-    plugins: [wasmInline(), cspMeta(), wasmLicenseText()],
-    optimizeDeps: { exclude: ['@tari-project/ootle', '@tari-project/ootle-wasm'] },
-    server: { host: '127.0.0.1', port: 5273, strictPort: true },
-    preview: { host: '127.0.0.1', port: 4273, strictPort: true },
-    build: {
-      target: 'es2022',
-      sourcemap: false,
-      chunkSizeWarningLimit: 2500, // one chunk on purpose: the wasm decryptor is most of it (see design.md)
-      outDir: gate ? 'dist-gate' : 'dist',
-      license: { fileName: 'THIRD-PARTY-LICENSES.md' },
-      rollupOptions: { input: gate ? 'gate.html' : 'index.html' },
-    },
-    test: { include: ['test/**/*.test.ts'], execArgv: ['--disable-warning=ExperimentalWarning'] }, // wasm ESM import is flagged experimental in Node 24
-  }
+export default defineConfig({
+  base: './',
+  plugins: [wasmInline(), cspMeta(), wasmLicenseText()],
+  optimizeDeps: { exclude: ['@tari-project/ootle', '@tari-project/ootle-wasm'] },
+  server: { host: '127.0.0.1', port: 5273, strictPort: true },
+  preview: { host: '127.0.0.1', port: 4273, strictPort: true },
+  build: {
+    target: 'es2022',
+    sourcemap: false,
+    chunkSizeWarningLimit: 2500, // one chunk on purpose: the wasm decryptor is most of it (see design.md)
+    license: { fileName: 'THIRD-PARTY-LICENSES.md' },
+  },
+  test: { include: ['test/**/*.test.ts'], execArgv: ['--disable-warning=ExperimentalWarning'] }, // wasm ESM import is flagged experimental in Node 24
 })

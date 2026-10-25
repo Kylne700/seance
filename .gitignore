@@ -1,6 +1,5 @@
 node_modules/
 dist/
-dist-gate/
 *.log
 .env
 .env.*
