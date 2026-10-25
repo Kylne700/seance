@@ -26,7 +26,7 @@ The four ghosts:
 
 Made for the Tari October Build Contest, "Spooky Secrets". Testnet only. Nothing here touches mainnet.
 
-Status: live at <https://kylne700.github.io/seance/> (GitHub Pages, rebuilt from `main` on every push). The link-preview image is `public/og.png`. A result card and a 56-second screen recording of the live page were made for the contest post; they are not part of this repo. The recording was made on 2026-10-18, so it shows the first set of transaction ids (see "Where the demo transactions went" below) and the page as it was that day.
+Status: live at <https://kylne700.github.io/seance/> (GitHub Pages, rebuilt from `main` on every push). The link-preview image is `public/og.png`. A result card was made for the contest post; it is not part of this repo. A silent screen recording of about 60 seconds, filmed on the live page on 2026-10-25, is `public/media/seance-demo.mp4`, served at <https://kylne700.github.io/seance/media/seance-demo.mp4>; it shows the page as it was that day. An older 56-second recording, made on 2026-10-18 and not part of this repo, shows the first set of transaction ids (see "Where the demo transactions went" below) and the page as it was that day.
 
 ## Try it
 
