@@ -187,5 +187,3 @@ export function createData(opts: { timeoutMs?: number; pick?: (n: number) => num
     example,
   }
 }
-
-export type Data = ReturnType<typeof createData>
