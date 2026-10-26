@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import ledger from '../ledger.json'
-import { MIRROR_URL } from '../src/config.ts'
+import { MIRROR_URL, receiptTx } from '../src/config.ts'
 import template from '../template/src/lib.rs?raw'
 
 const readme = readFileSync(new URL('../README.md', import.meta.url), 'utf8')
@@ -15,6 +15,10 @@ describe('the transaction links', () => {
     expect(entries).toHaveLength(18)
     expect(new Set(entries.map((e) => e.id)).size).toBe(18)
     expect([...linked].sort()).toEqual(entries.map((e) => e.id).sort())
+  })
+
+  it("link demo 1's receipt on the first indexer, the same address the saved-copy card links", () => {
+    expect(readme).toContain(`(${receiptTx(ledger.hero[0].id)})`)
   })
 
   it('no longer point at explorer pages, which the public indexer cannot fill any more', () => {

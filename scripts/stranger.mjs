@@ -1,12 +1,15 @@
 // The Stranger lens without the browser: three recent live transactions, each fetched by its id, parsed with the same code the
-// page uses, and checked. Exits 0 only if all three pass. Usage: node scripts/stranger.mjs [txid ...]  (no ids: use the latest ones)
-// One list request plus one request per transaction, 400 ms apart. It never scans the chain.
+// page uses, and checked. Exits 1 only if a check fails. Usage: node scripts/stranger.mjs [txid ...]  (no ids: use the latest ones)
+// No ids: it pages back through the recent list (3 list requests of 100 rows at most) until it has 3 private transfers. On a quiet chain it
+// checks the ones it found and says "quiet chain: N of 3" (exit 0; none found: SKIP, exit 0). It writes evidence/stranger-recent.txt only on a full pass.
+// One request per list page and per transaction, 400 ms apart. It never scans the chain.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { IndexerClient } from '@tari-project/ootle-indexer'
 import { parseTransaction, isTxId } from '../src/chain.ts'
 import { outcomeLabel } from '../src/format.ts'
-import { INDEXER_URL, RECENT_LIMIT } from '../src/config.ts'
+import { INDEXER_URL } from '../src/config.ts'
 import { decryptOutput } from '../src/decrypt.ts'
+import { PAGE, pickRecent, verdict } from './stranger-pick.ts'
 
 const WANT = 3
 const eve = JSON.parse(readFileSync(new URL('../ledger.json', import.meta.url), 'utf8')).keys.eve.viewSecret // fits nothing here
@@ -25,26 +28,30 @@ const check = (ok, what) => {
 
 let ids = process.argv.slice(2)
 if (ids.some((i) => !isTxId(i))) throw new Error('every argument must be a 64-hex transaction id')
+const auto = ids.length === 0
 const listed = new Map() // id -> the entry from the recent list, to compare with the by-id answer
-if (ids.length === 0) {
-  const recent = await client.listRecentTransactions({ limit: RECENT_LIMIT, last_id: null, source: null })
-  for (const item of recent.transactions) {
-    try {
-      const v = parseTransaction(item)
-      if (v.outputs.length === 0 || v.outcome !== 'Commit') continue // the page prefers settled ones too
-      listed.set(v.id, v)
-      ids.push(v.id)
-    } catch {
-      // an entry this page cannot read is skipped, as it is on the page
-    }
-    if (ids.length === WANT) break
+let requests = 0
+if (auto) {
+  const picked = await pickRecent(
+    async (lastId) => (await client.listRecentTransactions({ limit: PAGE, last_id: lastId, source: null })).transactions,
+    (item) => {
+      try {
+        const v = parseTransaction(item)
+        return v.outputs.length === 0 || v.outcome !== 'Commit' ? null : v // the page prefers settled ones too
+      } catch {
+        return null // an entry this page cannot read is skipped, as it is on the page
+      }
+    },
+    WANT,
+    () => sleep(400),
+  )
+  requests = picked.requests
+  for (const v of picked.found) {
+    listed.set(v.id, v)
+    ids.push(v.id)
   }
 }
-say(`Stranger lens, ${ids.length} transaction(s) from ${INDEXER_URL} at ${new Date().toISOString()}`)
-if (process.argv.length === 2 && ids.length < WANT) {
-  failed++
-  say(`  FAIL only ${ids.length} recent transactions with private transfers were found (wanted ${WANT})`)
-}
+say(`Stranger lens, ${ids.length} transaction(s) from ${INDEXER_URL} at ${new Date().toISOString()}${auto ? ` (${requests} list request(s) of ${PAGE} rows)` : ''}`)
 
 const ALLOWED = new Set(['resource', 'statement', 'index', 'commitment', 'senderNonce', 'ciphertext', 'ciphertextBytes', 'minimumValuePromise', 'viewableBalanceProof', 'spendCondition', 'lockKey'])
 const hex = (s, bytes) => new RegExp(`^[0-9a-f]{${bytes * 2}}$`).test(s)
@@ -74,7 +81,10 @@ for (const id of ids) {
   say(`       notes: ${v.outputs.map((o) => `${o.ciphertextBytes}B/${o.spendCondition}`).join(' ')}  instructions: ${v.instructionKinds.join(', ')}`)
 }
 
-say(failed === 0 ? 'RESULT: PASS' : `RESULT: FAIL (${failed} check(s))`)
-mkdirSync(new URL('../evidence/', import.meta.url), { recursive: true })
-if (process.argv.length === 2) writeFileSync(new URL('../evidence/stranger-recent.txt', import.meta.url), lines.join('\n') + '\n')
-process.exit(failed === 0 ? 0 : 1)
+const end = verdict(failed, auto, ids.length, WANT)
+say(end.line)
+if (end.save) {
+  mkdirSync(new URL('../evidence/', import.meta.url), { recursive: true })
+  writeFileSync(new URL('../evidence/stranger-recent.txt', import.meta.url), lines.join('\n') + '\n')
+}
+process.exit(end.exit)

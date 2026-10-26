@@ -1,7 +1,7 @@
 // Turns parsed data into DOM. Everything that comes from the chain (ids, hex, memos) goes in as text, never as HTML.
 import { RANGE_MAX, type Heard } from './auditor.ts'
 import type { StealthOutput, StealthStatement, TxView } from './chain.ts'
-import { explorerTx, LEDGER_URL, mirrorTx } from './config.ts'
+import { explorerTx, LEDGER_URL, mirrorTx, receiptTx } from './config.ts'
 import { savedOn, type Shown } from './data.ts'
 import type { Reading } from './decrypt.ts'
 import { clear, h } from './dom.ts'
@@ -40,10 +40,13 @@ export const outLink = (href: string, text: string, cls = 'btn ghost'): HTMLElem
 
 /**
  * The links beside an answer, so a visitor can check it without trusting this page. The explorer reads the same indexer as the page, so it only helps while
- * that indexer holds the transaction. A recorded answer points at the raw answer of Tari's second public indexer and at the recording itself.
+ * that indexer holds the transaction. A recorded answer points at the raw answer of Tari's second public indexer, at the recording itself and, last, at the first
+ * indexer's receipt. The Medium card shows only the first link, so a new link goes at the end.
  */
 export function proofLinks(s: Shown): HTMLElement[] {
-  return s.mode === 'live' ? [outLink(explorerTx(s.view.id), 'Open in the explorer')] : [outLink(mirrorTx(s.view.id), 'Raw answer from a second public indexer'), outLink(LEDGER_URL, 'The saved copy (ledger.json)')]
+  return s.mode === 'live'
+    ? [outLink(explorerTx(s.view.id), 'Open in the explorer')]
+    : [outLink(mirrorTx(s.view.id), 'Raw answer from a second public indexer'), outLink(LEDGER_URL, 'The saved copy (ledger.json)'), outLink(receiptTx(s.view.id), 'Receipt from the first public indexer')]
 }
 
 /** The one line that says where the Stranger's answer came from. */

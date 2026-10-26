@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import puppeteer from 'puppeteer-core'
-import { EXPLORER_URL, INDEXER_URL, LEDGER_URL, MIRROR_URL, explorerTx, mirrorTx } from '../src/config.ts'
+import { EXPLORER_URL, INDEXER_URL, LEDGER_URL, MIRROR_URL, explorerTx, mirrorTx, receiptTx } from '../src/config.ts'
 import { amountOf, tari } from '../src/format.ts'
 import { serveDir } from './serve.mjs'
 
@@ -330,10 +330,10 @@ async function tabThrough(page, label) {
   const bad = stops.filter((s) => s.style !== 'solid' || s.width < 2 || !s.onScreen || s.color !== 'rgb(255, 224, 138)')
   check(stops.length >= 10 && bad.length === 0, `${label}: all ${stops.length} Tab stops show the yellow 3 px outline and are on screen`, bad.map((s) => `${s.name} ${s.style} ${s.width} ${s.color} ${s.onScreen}`).join('; '))
   // each name is searched for after the previous one, so the Stranger's link and the Medium's link (the same words) are told apart.
-  // The links follow where the answer came from: live, the explorer; a saved copy, the second indexer's raw answer, then the saved ledger (only the first goes to the Medium).
+  // The links follow where the answer came from: live, the explorer; a saved copy, the second indexer's raw answer, the saved ledger, then the first indexer's receipt (only the first goes to the Medium).
   const copy = await page.evaluate(() => /^Recorded:/.test(document.querySelector('#stranger-body .source')?.textContent ?? ''))
   const first = copy ? 'a "Raw answer' : 'a "Open in the explorer'
-  const order = ['a "Skip', 'input#txid', 'button#look', 'button#summon', 'select#demo', 'button#hold', 'button#mode-switch', first, ...(copy ? ['a "The saved copy'] : []), 'input[key=', 'input#own-key', first, 'input[audit-key=', 'summary "How this token was made', 'a "Tari Ootle explorer', 'a "Tari Ootle docs']
+  const order = ['a "Skip', 'input#txid', 'button#look', 'button#summon', 'select#demo', 'button#hold', 'button#mode-switch', first, ...(copy ? ['a "The saved copy', 'a "Receipt'] : []), 'input[key=', 'input#own-key', first, 'input[audit-key=', 'summary "How this token was made', 'a "Tari Ootle explorer', 'a "Tari Ootle docs']
   let prev = -1
   const at = order.map((o) => (prev = stops.findIndex((s, k) => k > prev && s.name.startsWith(o))))
   check(at.every((i, k) => i >= 0 && (k === 0 || i > at[k - 1])), `${label}: Tab order follows the page: skip link, id field, buttons, mode switch, Stranger's proof links, keys, own key, Medium's proof link, the Auditor's keys, the template card, footer`, order.map((o, k) => `${o}=${at[k]}`).join(' '))
@@ -347,12 +347,12 @@ function expectHeard(s, t, keyName, label) {
 }
 
 // The links beside an answer follow where it came from: a live answer gets the explorer (it reads the same indexer), a saved copy gets the second
-// public indexer's raw answer and the saved ledger, and never a button to a page that is empty. They all open in a new tab, safely.
+// public indexer's raw answer, the saved ledger and the first indexer's receipt, and never a button to a page that is empty. They all open in a new tab, safely.
 function checkLinks(s, id, label) {
   const copy = /^Recorded:/.test(s.source ?? '')
-  const want = copy ? [mirrorTx(id), LEDGER_URL] : [explorerTx(id)]
+  const want = copy ? [mirrorTx(id), LEDGER_URL, receiptTx(id)] : [explorerTx(id)]
   const hrefs = s.strangerLinks.map((a) => a.href)
-  check(s.shownId === id && JSON.stringify(hrefs) === JSON.stringify(want) && s.strangerLinks.every((a) => a.target === '_blank' && /noopener/.test(a.rel)), `${label}: the Stranger's links fit ${copy ? 'a saved copy (the second indexer\'s raw answer, ledger.json)' : 'a live answer (the explorer)'} for this very id and open safely`, hrefs.join(' | '))
+  check(s.shownId === id && JSON.stringify(hrefs) === JSON.stringify(want) && s.strangerLinks.every((a) => a.target === '_blank' && /noopener/.test(a.rel)), `${label}: the Stranger's links fit ${copy ? 'a saved copy (the second indexer\'s raw answer, ledger.json, the first indexer\'s receipt)' : 'a live answer (the explorer)'} for this very id and open safely`, hrefs.join(' | '))
   check(s.mediumHref === want[0] && s.mediumTarget === '_blank' && /noopener/.test(s.mediumRel ?? '') && (copy ? /^Raw answer from a second public indexer/ : /^Open in the explorer/).test(s.mediumLink ?? ''), `${label}: the Medium card has its own link for the same id`, `${s.mediumLink} ${s.mediumHref}`)
 }
 
@@ -1186,7 +1186,8 @@ function staticChecks() {
   check(!existsSync(join(DIST, 'gate.html')) && existsSync(join(DIST, 'THIRD-PARTY-LICENSES.md')) && existsSync(join(DIST, 'favicon.svg')), 'build: no gate page shipped; third-party licence notices and favicon are')
   // Hosts the page may name: the indexer (the only one it contacts: the CSP allows nothing else), and links a visitor can click: the explorer, ootle.tari.com, the second
   // public indexer (raw answers of saved copies), GitHub and raw.githubusercontent.com (the template, the saved ledger). The last two are the SVG namespace and the preview tags.
-  const allowed = new Set([INDEXER_HOST, new URL(EXPLORER_URL).host, 'ootle.tari.com', new URL(MIRROR_URL).host, 'github.com', new URL(LEDGER_URL).host, 'www.w3.org', new URL(PUBLIC_URL).host])
+  // The recording's own `indexer` field names where it was taken from: recorded data, kept as it was, and never contacted.
+  const allowed = new Set([INDEXER_HOST, new URL(EXPLORER_URL).host, 'ootle.tari.com', new URL(MIRROR_URL).host, 'github.com', new URL(LEDGER_URL).host, 'www.w3.org', new URL(PUBLIC_URL).host, new URL(ledger.indexer).host])
   const found = new Map()
   const walkDir = (d) => {
     for (const n of readdirSync(d)) {
